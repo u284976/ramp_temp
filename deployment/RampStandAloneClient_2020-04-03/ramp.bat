@@ -1,0 +1,1 @@
+java -classpath .;./lib/* it.unibo.deis.lia.ramp.RampEntryPoint
