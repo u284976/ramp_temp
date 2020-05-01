@@ -1411,9 +1411,9 @@ public class ControllerService extends Thread {
                      *      In particular when the clientNode is different from
                      *      the sourceNode the result is not correct.
                      */
-                    //sourceNodeDest = Resolver.getInstance(false).resolveBlocking(sourceNodeId, 5 * 1000).get(0).getPath();
+                    sourceNodeDest = Resolver.getInstance(false).resolveBlocking(sourceNodeId, 5 * 1000).get(0).getPath();
                     // TODO Remove me
-                    sourceNodeDest = new String[]{"192.168.3.101","192.168.3.100"};
+                    // sourceNodeDest = new String[]{"192.168.3.101","192.168.3.100"};
                 }
 
                 MultiNode sourceNode = topologyGraphSnapshot.getNode(Integer.toString(sourceNodeId));

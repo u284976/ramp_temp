@@ -18,6 +18,8 @@
 ./src/test/sdncontroller/ControllerTest.java
 ./src/test/sdncontroller/ControllerClientMLRTestReceiver.java
 ./src/test/iotos/CollectNetworkInfoService.java
+./src/test/iotos/graphdisplaytest.java
+./src/test/iotos/messagetype/CollectNetworkInfoRequest.java
 ./src/test/iotos/CollectNetworkInfoClient.java
 ./src/iotos/AssistantController.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceManager.java

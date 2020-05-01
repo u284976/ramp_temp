@@ -414,7 +414,7 @@ public class MultipleFlowsSinglePriorityForwarder implements DataPlaneForwarder 
                     synchronized (this) {
                         this.lastPacketPriority = flowPriority;
                     }
-                    System.out.println("MultipleFlowsSinglePriorityForwarder: packet " + up.getPacketId() + " with flowId " + flowId + " found the transmission channel free, no changes made to the packet");
+                    System.out.println("MultipleFlowsSinglePriorityForwarder: packet " + up.getPacketId() + " with flowId " + flowId+" and flowPriority=" + flowPriority + " found the transmission channel free, no changes made to the packet");
                 }
             }
             /*

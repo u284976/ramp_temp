@@ -17,7 +17,15 @@ import it.unibo.deis.lia.ramp.service.management.ServiceResponse;
 public class CollectNetworkInfoClient{
     private static RampEntryPoint ramp;
     private static BoundReceiveSocket clientSocket;
-    private static HashMap<String, ServiceResponse> availableClients;
+
+    /**
+     * nodeID (Integer)
+     *    |
+     *    |-single hop IP address (String)
+     *              |
+     *              |-ServiceResponse
+     */
+    private static HashMap<Integer,HashMap<String, ServiceResponse>> availableSingleHops;
 
     public static void main(String[] args){
         ramp = RampEntryPoint.getInstance(true, null);
@@ -56,22 +64,37 @@ public class CollectNetworkInfoClient{
                 e.printStackTrace();
             }
 
-            availableClients = new HashMap<>();
-            availableClients.clear();
-
+            availableSingleHops = new HashMap<>();
+            
             for (ServiceResponse service : services) {
-                String[] keys = service.getServerDest();
-                String key = keys[0];
 
-                if(service.getServerNodeId() != ramp.getNodeId() && !availableClients.containsKey(key)){
-                    availableClients.put(key, service);
+                Integer singleHopID = service.getServerNodeId();
+                String[] paths = service.getServerDest();
+                String path = paths[0];
+
+                // old singleHop ID
+                if(singleHopID != ramp.getNodeId() && availableSingleHops.containsKey(singleHopID)){
+                    // new IP adress
+                    if(!availableSingleHops.get(singleHopID).containsKey(path)){
+                        availableSingleHops.get(singleHopID).put(path, service);
+                    }
                 }
+                // nodeID
+                else if(singleHopID != ramp.getNodeId()){
+                    HashMap<String, ServiceResponse> newSingleHopAddress = new HashMap<>();
+                    newSingleHopAddress.put(path, service);
+                    availableSingleHops.put(singleHopID,newSingleHopAddress);
+                }
+
             }
 
             System.out.println();
             System.out.println("===============");
-            for(String key : availableClients.keySet()){
-                System.out.println(key);
+            for(Integer nodeID:availableSingleHops.keySet()){
+                System.out.println(nodeID);
+                for(String path : availableSingleHops.get(nodeID).keySet()){
+                    System.out.println(path);
+                }
             }
             try {
                 Thread.sleep(10*1000);    
