@@ -20,8 +20,8 @@
 ./src/test/iotos/CollectNetworkInfoService.java
 ./src/test/iotos/graphdisplaytest.java
 ./src/test/iotos/messagetype/CollectNetworkInfoRequest.java
+./src/test/iotos/SDNClient.java
 ./src/test/iotos/CollectNetworkInfoClient.java
-./src/iotos/AssistantController.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceManager.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceDiscoveryAgent.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceDescriptor.java

@@ -290,7 +290,7 @@ public class MultipleFlowsSinglePriorityForwarder implements DataPlaneForwarder 
                 /*
                  * If the last packet was not sent by a flow with the highest priority, save the send information and occupy the transmission channel
                  */
-                if (this.lastPacketPriority > 0) {
+                if (this.lastPacketPriority > 1) {
                     synchronized (this) {
                         // double sendDuration = ((double) up.getBytePayload().length / networkSpeed) * 1000;
                         double sendDuration = getAverageInterPacketTime(nextSendNetworkInterface) * 1.25;
