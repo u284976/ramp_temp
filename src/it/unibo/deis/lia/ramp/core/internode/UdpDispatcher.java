@@ -204,7 +204,7 @@ public class UdpDispatcher extends Thread {
     }
 
     private void heartbeatRequestHandler(InetAddress remoteAddress, HeartbeatRequest heartbeatRequest) throws Exception {
-        System.out.println("UdpDispatcher HeartbeatRequest " + System.currentTimeMillis() + " from " + remoteAddress);
+        // *****System.out.println("UdpDispatcher HeartbeatRequest " + System.currentTimeMillis() + " from " + remoteAddress);
         Heartbeater.getInstance(false).addNeighbor(remoteAddress, heartbeatRequest.getNodeId());
 
         HeartbeatResponse hResp = new HeartbeatResponse();
@@ -228,7 +228,7 @@ public class UdpDispatcher extends Thread {
     }
 
     private void heartbeatResponseHandler(InetAddress remoteAddress, HeartbeatResponse heartbeatResponse) {
-        System.out.println("UdpDispatcher HeartbeatResponse " + System.currentTimeMillis() + " from " + remoteAddress);
+        // *****System.out.println("UdpDispatcher HeartbeatResponse " + System.currentTimeMillis() + " from " + remoteAddress);
         Heartbeater.getInstance(false).addNeighbor(remoteAddress, heartbeatResponse.getNodeId());
     }
 

@@ -2002,7 +2002,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
             for(InetAddress address : addresses){
             
                 Long lastMeasureTime = lastMeasureTimes.get(address);
-                if(lastMeasureTime != null && lastMeasureTime - System.currentTimeMillis() < 3*TIME_INTERVAL){
+                if(lastMeasureTime != null && System.currentTimeMillis() - lastMeasureTime < 3*TIME_INTERVAL){
                     continue;
                 }
                 System.out.println("======================================");
@@ -2019,6 +2019,11 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                 );
 
                 MeasureMessage msg = new MeasureMessage(MeasureMessage.Check_Occupy,client.getLocalPort());
+
+                while(!clientMeasurer.tryOccupy()){
+                    sleep(1000);
+                    System.out.println("waiting a few seconds to occupy clientMeasure");
+                };
 
                 E2EComm.sendUnicast(
                     service.getServerDest(),
@@ -2067,8 +2072,8 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
                                     delay[i] = System.currentTimeMillis() - pre;
 
-                                    System.out.println("==========");
-                                    System.out.println("delay = " + delay[i]);
+                                    // System.out.println("==========");
+                                    // System.out.println("delay = " + delay[i]);
                                     temp += delay[i];
                                 }
                                 delayClient.close();
@@ -2087,8 +2092,8 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                     E2EComm.serialize(msg)
                                 );
 
-                                System.out.println("==========");
-                                System.out.println("starting transfer...");
+                                // System.out.println("==========");
+                                // System.out.println("starting transfer...");
 
                                 E2EComm.receive(throughputClient);
                                 long elapsed = System.currentTimeMillis() - pre;
@@ -2096,11 +2101,11 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
 
                                 double throughput = (1024.0 / (elapsed-avgDelay))*1000;
-                                System.out.println("==========");
-                                System.out.println("pre = " + pre);
-                                System.out.println("elapsed = " + elapsed);
-                                System.out.println("avgDelay = " + avgDelay);
-                                System.out.println("throughput = " + throughput + "KB/s");
+                                // System.out.println("==========");
+                                // System.out.println("pre = " + pre);
+                                // System.out.println("elapsed = " + elapsed);
+                                // System.out.println("avgDelay = " + avgDelay);
+                                // System.out.println("throughput = " + throughput + "KB/s");
 
                                 msg = new MeasureMessage(MeasureMessage.Test_Done);
                                 E2EComm.sendUnicast(
@@ -2112,18 +2117,25 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 lastMeasureTime = System.currentTimeMillis();
                                 lastMeasureTimes.put(address,lastMeasureTime);
                                 throughputClient.close();
+                                clientMeasurer.releaseOccupy();
                                 break;
                             // retry
-                            case MeasureMessage.Response_Occupied:    
-                                    sleep(5 * 1000);
-                                    msg = new MeasureMessage(MeasureMessage.Check_Occupy,client.getLocalPort());
+                            case MeasureMessage.Response_Occupied:
 
-                                    E2EComm.sendUnicast(
-                                        service.getServerDest(),
-                                        service.getServerPort(),
-                                        service.getProtocol(),
-                                        E2EComm.serialize(msg)
-                                    );
+                                // release Occupy, avoid deadlock 
+                                clientMeasurer.releaseOccupy();
+                                sleep(3000);
+                                while (!clientMeasurer.tryOccupy()) {
+                                    sleep(50);
+                                }
+                                msg = new MeasureMessage(MeasureMessage.Check_Occupy,client.getLocalPort());
+
+                                E2EComm.sendUnicast(
+                                    service.getServerDest(),
+                                    service.getServerPort(),
+                                    service.getProtocol(),
+                                    E2EComm.serialize(msg)
+                                );
                                 // make while loop do again and receive response
                                 retry = true;
                                 break;

@@ -2,6 +2,7 @@ package test.iotos;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.concurrent.Semaphore;
 
 import it.unibo.deis.lia.ramp.core.e2e.BoundReceiveSocket;
 import it.unibo.deis.lia.ramp.core.e2e.E2EComm;
@@ -18,9 +19,9 @@ public class ClientMeasurer extends Thread{
     private BoundReceiveSocket service;
 
     private static boolean active = true;
-    private static boolean occupied = false;
     private static String rampID;
-
+    // private static final Semaphore measuring = new Semaphore(1);
+    private static boolean occupied;
 
     public static ClientMeasurer getInstance(){
         if(clientMeasurer == null){
@@ -44,10 +45,20 @@ public class ClientMeasurer extends Thread{
             service.getLocalPort(),
             E2EComm.UDP
         );
-
-        
+        occupied = false;
     }
 
+    public static synchronized boolean tryOccupy(){
+        if(occupied == true){
+            return false;
+        }else{
+            occupied = true;
+            return true;
+        }
+    }
+    public void releaseOccupy(){
+        occupied = false;
+    }
 
     @Override
     public void run(){
@@ -95,37 +106,34 @@ public class ClientMeasurer extends Thread{
             if(payload instanceof MeasureMessage){
                 MeasureMessage mm = (MeasureMessage)payload;
                 int messagetype = mm.getMessageType();
-                System.out.println("==========");
+                // System.out.println("==========");
                 MeasureMessage res;
                 switch (messagetype) {
                     case MeasureMessage.Check_Occupy:
                         // System.out.println("receive request about check occupy");
-                        synchronized(this){
-                            if(occupied == true){
-                                res = new MeasureMessage(MeasureMessage.Response_Occupied);
-                                try {
-                                    E2EComm.sendUnicast(
-                                        E2EComm.ipReverse(up.getSource()),
-                                        mm.getClientPort(),
-                                        E2EComm.UDP,
-                                        E2EComm.serialize(res)
-                                    );
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }else{
-                                occupied = true;
-                                res = new MeasureMessage(MeasureMessage.Response_OK);
-                                try {
-                                    E2EComm.sendUnicast(
-                                        E2EComm.ipReverse(up.getSource()),
-                                        mm.getClientPort(),
-                                        E2EComm.UDP,
-                                        E2EComm.serialize(res)
-                                    );
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                        if(tryOccupy()){
+                            res = new MeasureMessage(MeasureMessage.Response_OK);
+                            try {
+                                E2EComm.sendUnicast(
+                                    E2EComm.ipReverse(up.getSource()),
+                                    mm.getClientPort(),
+                                    E2EComm.UDP,
+                                    E2EComm.serialize(res)
+                                );
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }else{
+                            res = new MeasureMessage(MeasureMessage.Response_Occupied);
+                            try {
+                                E2EComm.sendUnicast(
+                                    E2EComm.ipReverse(up.getSource()),
+                                    mm.getClientPort(),
+                                    E2EComm.UDP,
+                                    E2EComm.serialize(res)
+                                );
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
                         }
                         break;
@@ -165,7 +173,7 @@ public class ClientMeasurer extends Thread{
                         }
                         break;
                     case MeasureMessage.Test_Done:
-                        occupied = false;
+                        releaseOccupy();
                         break;
                 }
             }
