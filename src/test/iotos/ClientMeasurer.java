@@ -2,7 +2,6 @@ package test.iotos;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.util.concurrent.Semaphore;
 
 import it.unibo.deis.lia.ramp.core.e2e.BoundReceiveSocket;
 import it.unibo.deis.lia.ramp.core.e2e.E2EComm;
@@ -20,7 +19,6 @@ public class ClientMeasurer extends Thread{
 
     private static boolean active = true;
     private static String rampID;
-    // private static final Semaphore measuring = new Semaphore(1);
     private static boolean occupied;
 
     public static ClientMeasurer getInstance(){
