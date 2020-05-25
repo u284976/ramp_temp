@@ -100,11 +100,11 @@ public class ServiceManager extends Thread {
                     ServiceManager.SERVICEMANAGER_PROTOCOL
             );
             while (active) {
-                // *****System.out.println("ServiceManager.run receive");
+                System.out.println("ServiceManager.run receive");
                 // timeout = 0 ==>> no timeout
                 GenericPacket recGP = E2EComm.receive(receiveServiceManagerSocket);
 
-                // *****System.out.println("ServiceManager.run received gp: " + recGP);
+                System.out.println("ServiceManager.run received gp: " + recGP);
                 new ServiceManagerHandler(recGP).start();
             }
         } catch (SocketException se) {
@@ -134,7 +134,7 @@ public class ServiceManager extends Thread {
                         System.out.println("ServiceManagerHandler: required ServiceRequest, received " + recGP.getClass().getName());
                     } else {
                         ServiceRequest recSReq = (ServiceRequest) recO;
-                        // *****System.out.println("ServiceManagerHandler: node with nodeId " + recBP.getSourceNodeId() + " required " + recSReq.getServiceName());
+                        System.out.println("ServiceManagerHandler: node with nodeId " + recBP.getSourceNodeId() + " required " + recSReq.getServiceName());
 
                         /*############# START REGION #############
                         ####### Edited by Lorenzo Donini #########
