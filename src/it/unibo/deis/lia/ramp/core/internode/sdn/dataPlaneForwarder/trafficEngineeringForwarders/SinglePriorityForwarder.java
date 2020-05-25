@@ -230,9 +230,6 @@ public class SinglePriorityForwarder implements DataPlaneForwarder {
                  * check if the transmission channel is empty
                  */
                 int currentProgressPercentage = getCurrentProgressPercentage(nextSendNetworkInterface);
-                System.out.println("==============================");
-                System.out.println("currentProgressPercentage = "+currentProgressPercentage);
-                System.out.println("==============================");
                 int randomNumber = ThreadLocalRandom.current().nextInt(100);
                 int attempts = 0;
                 /*

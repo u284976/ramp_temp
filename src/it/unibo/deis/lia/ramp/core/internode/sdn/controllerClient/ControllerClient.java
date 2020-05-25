@@ -46,9 +46,14 @@ import it.unibo.deis.lia.ramp.core.internode.sdn.applicationRequirements.Traffic
 import it.unibo.deis.lia.ramp.core.internode.sdn.pathSelection.PathSelectionMetric;
 
 import it.unibo.deis.lia.ramp.core.internode.*;
+import it.unibo.deis.lia.ramp.service.management.ServiceDiscovery;
+import it.unibo.deis.lia.ramp.service.management.ServiceManager;
 import it.unibo.deis.lia.ramp.service.management.ServiceResponse;
 import it.unibo.deis.lia.ramp.util.NetworkInterfaceStats;
 import it.unibo.deis.lia.ramp.util.NodeStats;
+import test.iotos.ClientMeasurer;
+import test.iotos.messagetype.MeasureMessage;
+
 import org.graphstream.graph.Graph;
 
 /**
@@ -237,6 +242,8 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
      */
     private PrintWriter printWriterRules;
 
+    private ClientMeasurer clientMeasurer;
+
     private ControllerClient() {
 
         this.controllerServiceDiscoveryPolicy = ControllerServiceDiscoveryPolicy.FIRST_AVAILABLE;
@@ -257,6 +264,13 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
         active = true;
         this.updateManager = new UpdateManager();
+
+        /**
+         * adder @u284976
+         * for measure the "one hop" link capability (delay and throughput)
+         * create a ramp middleware service, and waiting by other client send request
+         */
+        clientMeasurer = ClientMeasurer.getInstance();
 
         /*
          * Make sure this manager is always instantiated before any other DataPlaneForwarder
@@ -348,6 +362,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
         }
         printWriterRules.println("ControllerClient NodeId=" + Dispatcher.getLocalRampId() + " TEST LOG");
         printWriterRules.flush();
+
     }
 
     public synchronized static ControllerClient getInstance() {
@@ -1876,6 +1891,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
         private Map<String, NodeStats> networkInterfaceStats;
         private boolean active;
+        private Map<InetAddress, Long> lastMeasureTimes = new HashMap<InetAddress, Long>();
 
         UpdateManager() {
             this.networkInterfaceStats = new HashMap<>();
@@ -1949,8 +1965,10 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
             /*
              * Update network stats for the interfaces associated to the addresses of the node
              */
-            for (String address : this.networkInterfaceStats.keySet())
+            for (String address : this.networkInterfaceStats.keySet()){
                 this.networkInterfaceStats.get(address).updateStats();
+            }
+                
             /*
              * Send the obtained information about neighbor nodes to the controller
              */
@@ -1971,6 +1989,154 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
             }
         }
 
+        /**
+         * adder @u284976
+         * send measure request to one hop neighbor
+         */
+
+        private void Measure() throws Exception{
+
+            BoundReceiveSocket client = E2EComm.bindPreReceive(E2EComm.UDP);
+
+            Vector<InetAddress> addresses = Heartbeater.getInstance(false).getNeighbors();
+            for(InetAddress address : addresses){
+            
+                Long lastMeasureTime = lastMeasureTimes.get(address);
+                if(lastMeasureTime != null && lastMeasureTime - System.currentTimeMillis() < 3*TIME_INTERVAL){
+                    continue;
+                }
+                System.out.println("======================================");
+                System.out.println("address = " + address.toString());
+                Integer nodeId = Heartbeater.getInstance(false).getNodeId(address);
+                String[] addr = new String[1];
+                // address = /10.0.0.1
+                // addr[0] = 10.0.0.1
+                addr[0] = address.toString().substring(1);
+
+                ServiceResponse service = ServiceDiscovery.findService(
+                    addr,
+                    "measure_"+nodeId.toString()
+                );
+
+                MeasureMessage msg = new MeasureMessage(MeasureMessage.Check_Occupy,client.getLocalPort());
+
+                E2EComm.sendUnicast(
+                    service.getServerDest(),
+                    service.getServerPort(),
+                    service.getProtocol(),
+                    E2EComm.serialize(msg)
+                );
+                boolean retry = true;
+                while (retry) {
+                    GenericPacket gp = E2EComm.receive(client,5000);
+                    UnicastPacket up = (UnicastPacket)gp;
+                    Object payload = E2EComm.deserialize(up.getBytePayload());
+
+                    if(payload instanceof MeasureMessage){
+
+                        MeasureMessage mm = (MeasureMessage)payload;
+                        int res = mm.getMessageType();
+
+                        switch (res) {
+                            /**
+                             * neighbor is non-occupied,
+                             * start measure delay.
+                             */
+                            case MeasureMessage.Response_OK:
+
+                                /**
+                                 * Setting will not enter while loop again
+                                 */
+                                retry = false;
+
+                                BoundReceiveSocket delayClient = E2EComm.bindPreReceive(E2EComm.UDP);
+                                long[] delay = new long[5];
+                                long temp = 0;
+
+                                for(int i=0 ; i<5 ; i++){
+                                    msg = new MeasureMessage(MeasureMessage.Test_Delay,delayClient.getLocalPort());
+                                    E2EComm.sendUnicast(
+                                        service.getServerDest(),
+                                        service.getServerPort(),
+                                        service.getProtocol(),
+                                        E2EComm.serialize(msg)
+                                    );
+                                    long pre = System.currentTimeMillis();
+
+                                    E2EComm.receive(delayClient);
+
+                                    delay[i] = System.currentTimeMillis() - pre;
+
+                                    System.out.println("==========");
+                                    System.out.println("delay = " + delay[i]);
+                                    temp += delay[i];
+                                }
+                                delayClient.close();
+
+                                long avgDelay = temp/delay.length;
+
+                                // send file need use TCP
+                                BoundReceiveSocket throughputClient = E2EComm.bindPreReceive(E2EComm.TCP);
+                                msg = new MeasureMessage(MeasureMessage.Test_Throughput,throughputClient.getLocalPort(),"1M.test");
+
+                                long pre = System.currentTimeMillis();
+                                E2EComm.sendUnicast(
+                                    service.getServerDest(),
+                                    service.getServerPort(),
+                                    service.getProtocol(),
+                                    E2EComm.serialize(msg)
+                                );
+
+                                System.out.println("==========");
+                                System.out.println("starting transfer...");
+
+                                E2EComm.receive(throughputClient);
+                                long elapsed = System.currentTimeMillis() - pre;
+
+
+
+                                double throughput = (1024.0 / (elapsed-avgDelay))*1000;
+                                System.out.println("==========");
+                                System.out.println("pre = " + pre);
+                                System.out.println("elapsed = " + elapsed);
+                                System.out.println("avgDelay = " + avgDelay);
+                                System.out.println("throughput = " + throughput + "KB/s");
+
+                                msg = new MeasureMessage(MeasureMessage.Test_Done);
+                                E2EComm.sendUnicast(
+                                    service.getServerDest(),
+                                    service.getServerPort(),
+                                    service.getProtocol(),
+                                    E2EComm.serialize(msg)
+                                );
+                                lastMeasureTime = System.currentTimeMillis();
+                                lastMeasureTimes.put(address,lastMeasureTime);
+                                throughputClient.close();
+                                break;
+                            // retry
+                            case MeasureMessage.Response_Occupied:    
+                                    sleep(5 * 1000);
+                                    msg = new MeasureMessage(MeasureMessage.Check_Occupy,client.getLocalPort());
+
+                                    E2EComm.sendUnicast(
+                                        service.getServerDest(),
+                                        service.getServerPort(),
+                                        service.getProtocol(),
+                                        E2EComm.serialize(msg)
+                                    );
+                                // make while loop do again and receive response
+                                retry = true;
+                                break;
+                        }                       
+                    
+                    }
+                }
+
+            }
+
+            client.close();
+        }
+
         @Override
         public void run() {
             /*
@@ -1987,6 +2153,17 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                  * Send invoked before sleep method to allow the controller to receive information at components startup
                  */
                 sendTopologyUpdate();
+
+                /**
+                 * adder @u284976
+                 * send measure request to one hop neighbor
+                 */
+                try {
+                    Measure(); 
+                } catch (Exception e) {
+                    // e.printStackTrace();
+                }
+                
                 try {
                     Thread.sleep(TIME_INTERVAL);
                 } catch (InterruptedException e) {
