@@ -2105,7 +2105,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 // System.out.println("pre = " + pre);
                                 // System.out.println("elapsed = " + elapsed);
                                 // System.out.println("avgDelay = " + avgDelay);
-                                // System.out.println("throughput = " + throughput + "KB/s");
+                                System.out.println("throughput = " + (throughput*8) + "Kbit/s");
 
                                 msg = new MeasureMessage(MeasureMessage.Test_Done);
                                 E2EComm.sendUnicast(
@@ -2173,7 +2173,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                 try {
                     Measure(); 
                 } catch (Exception e) {
-                    // e.printStackTrace();
+                    e.printStackTrace();
                 }
                 
                 try {
