@@ -1997,16 +1997,18 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
         private void Measure() throws Exception{
 
             BoundReceiveSocket client = E2EComm.bindPreReceive(E2EComm.UDP);
+            // address, List={delay,throughput}
+            Map<String,List<Double>> measureResult = new HashMap<String,List<Double>>();
 
             Vector<InetAddress> addresses = Heartbeater.getInstance(false).getNeighbors();
             for(InetAddress address : addresses){
             
                 Long lastMeasureTime = lastMeasureTimes.get(address);
-                if(lastMeasureTime != null && System.currentTimeMillis() - lastMeasureTime < 3*TIME_INTERVAL){
+                if(lastMeasureTime != null && System.currentTimeMillis() - lastMeasureTime < TIME_INTERVAL){
                     continue;
                 }
-                System.out.println("======================================");
-                System.out.println("address = " + address.toString());
+                // System.out.println("======================================");
+                // System.out.println("address = " + address.toString());
                 Integer nodeId = Heartbeater.getInstance(false).getNodeId(address);
                 String[] addr = new String[1];
                 // address = /10.0.0.1
@@ -2078,7 +2080,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 }
                                 delayClient.close();
 
-                                long avgDelay = temp/delay.length;
+                                double avgDelay = temp/delay.length;
 
                                 // send file need use TCP
                                 BoundReceiveSocket throughputClient = E2EComm.bindPreReceive(E2EComm.TCP);
@@ -2100,12 +2102,12 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
 
 
-                                double throughput = (1024.0 / (elapsed-avgDelay))*1000;
+                                double throughput = (1024.0 / elapsed)*1000*8;
                                 // System.out.println("==========");
                                 // System.out.println("pre = " + pre);
                                 // System.out.println("elapsed = " + elapsed);
                                 // System.out.println("avgDelay = " + avgDelay);
-                                System.out.println("throughput = " + (throughput*8) + "Kbit/s");
+                                System.out.println("throughput = " + throughput + "Kbit/s");
 
                                 msg = new MeasureMessage(MeasureMessage.Test_Done);
                                 E2EComm.sendUnicast(
@@ -2118,6 +2120,14 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 lastMeasureTimes.put(address,lastMeasureTime);
                                 throughputClient.close();
                                 clientMeasurer.releaseOccupy();
+
+                                // store
+                                String neighborAddress = service.getServerDest()[0];
+                                List<Double> result = new ArrayList<Double>();
+                                result.add(avgDelay);
+                                result.add(throughput);
+                                measureResult.put(neighborAddress, result);
+                                
                                 break;
                             // retry
                             case MeasureMessage.Response_Occupied:
@@ -2140,12 +2150,21 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 retry = true;
                                 break;
                         }                       
-                    
                     }
                 }
-
             }
-
+            ControllerMessageUpdate updateMessage = new ControllerMessageUpdate(MessageType.TOPOLOGY_LINK_UPDATE, this.networkInterfaceStats, null, null, null, null, null, null, null, null, measureResult);
+            ServiceResponse serviceResponse = getControllerService();
+            if (serviceResponse == null) {
+                System.out.println("ControllerClient: controller service not found, cannot bind client socket");
+            } else {
+                try {
+                    E2EComm.sendUnicast(serviceResponse.getServerDest(), serviceResponse.getServerNodeId(), serviceResponse.getServerPort(), serviceResponse.getProtocol(), CONTROL_FLOW_ID, E2EComm.serialize(updateMessage));
+                    System.out.println("ControllerClient UpdateManager: topology update sent to the controller");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
             client.close();
         }
 

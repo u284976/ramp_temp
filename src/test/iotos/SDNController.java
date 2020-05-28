@@ -17,7 +17,7 @@ public class SDNController{
         
         System.out.println("================================");
         System.out.println("SDN Controller starting...");
-        System.out.println("version : 2020-05-18");
+        System.out.println("version : 2020-05-28");
         System.out.println("================================");
 
         ramp = RampEntryPoint.getInstance(true, null);

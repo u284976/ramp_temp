@@ -49,6 +49,8 @@ public class ControllerMessageUpdate extends ControllerMessage {
 
     private boolean osRoutingPriority;
 
+    private Map<String,List<Double>> measureResult;
+
     /**
      * TOPOLOGY_UPDATE message: messageType, neighborNodes, nodeStats
      * TRAFFIC_ENGINEERING_POLICY_UPDATE message: messageType, trafficEngineeringPolicy
@@ -99,6 +101,26 @@ public class ControllerMessageUpdate extends ControllerMessage {
         this.viaIp = null;
         this.routeId = ControllerMessage.UNUSED_FIELD;
         this.osRoutingPriority = false;
+    }
+
+    // adder @u284976
+    public ControllerMessageUpdate(MessageType messageType, Map<String, NodeStats> nodeStats, Map<Integer, List<String>> neighborNodes, TrafficEngineeringPolicy trafficEngineeringPolicy, RoutingPolicy routingPolicy, Map<Integer, PathDescriptor> newPathMappings, Map<Integer, Integer> flowPriorities, DataPlaneMessage dataPlaneMessage, String dataType, String dataPlaneRule, Map<String,List<Double>> measureResult) {
+        super(messageType, nodeStats);
+
+        this.neighborNodes = neighborNodes;
+        this.trafficEngineeringPolicy = trafficEngineeringPolicy;
+        this.routingPolicy = routingPolicy;
+        this.newPathMappings = newPathMappings;
+        this.flowPriorities = flowPriorities;
+        this.dataPlaneMessage = dataPlaneMessage;
+        this.dataType = dataType;
+        this.dataPlaneRule = dataPlaneRule;
+        this.srcIp = null;
+        this.destIp = null;
+        this.viaIp = null;
+        this.routeId = ControllerMessage.UNUSED_FIELD;
+        this.osRoutingPriority = false;
+        this.measureResult = measureResult;
     }
 
     public ControllerMessageUpdate(MessageType messageType, int clientPort, String srcIP, String destIP, String viaIP, int routeId) {
@@ -178,6 +200,10 @@ public class ControllerMessageUpdate extends ControllerMessage {
 
     public String getDataPlaneRule() {
         return dataPlaneRule;
+    }
+
+    public Map<String,List<Double>> getMeasureResult(){
+        return measureResult;
     }
 
     public String getSrcIP() { return this.srcIp; }

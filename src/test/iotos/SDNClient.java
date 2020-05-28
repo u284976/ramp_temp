@@ -15,7 +15,7 @@ public class SDNClient{
 
         System.out.println("================================");
         System.out.println("SDN Client starting...");
-        System.out.println("version : 2020-05-18");
+        System.out.println("version : 2020-05-28");
         System.out.println("================================");
 
         ramp = RampEntryPoint.getInstance(true, null);

@@ -1083,6 +1083,10 @@ public class ControllerService extends Thread {
                         case TOPOLOGY_UPDATE:
                             handleTopologyUpdate((ControllerMessageUpdate) controllerMessage, clientNodeId);
                             break;
+                        // adder @u284976
+                        case TOPOLOGY_LINK_UPDATE:
+                            handleTopologyLinkUpdate((ControllerMessageUpdate) controllerMessage, clientNodeId);
+                            break;
                         case PRIORITY_VALUE_REQUEST:
                             handlePriorityValueRequest((ControllerMessageRequest) controllerMessage, clientNodeId, clientDest);
                             break;
@@ -1632,6 +1636,34 @@ public class ControllerService extends Thread {
                     System.out.println("Node edge between " + edge.getNode0().getId() + " and " + edge.getNode1().getId());
                     for (String key : edge.getAttributeKeySet())
                         System.out.println("Node edge address " + key + ": " + edge.getAttribute(key));
+                }
+            }
+        }
+
+        // adder @u284976
+        private void handleTopologyLinkUpdate(ControllerMessageUpdate updateMessage, int clientNodeId){
+            Map<String,List<Double>> measureResult = updateMessage.getMeasureResult();
+            MultiNode sourceGraphNode = topologyGraph.getNode(Integer.toString(clientNodeId));
+
+            if(sourceGraphNode != null){
+                for(String neighborAddress : measureResult.keySet()){
+                    for(Edge neighborEdge : sourceGraphNode.getEachEdge()){
+                        String label = neighborEdge.getAttribute("ui.label");
+                        if(label.contains(neighborAddress)){
+                            System.out.println("=============");
+                            System.out.println("setup delay and throughput");
+                            // if(neighborEdge.getAttribute("delay") != null){
+                            //     neighborEdge.removeAttribute("delay");
+                            // }
+                            // if(neighborEdge.getAttribute("throughput") != null){
+                            //     neighborEdge.removeAttribute("throughput");
+                            // }
+                            String delay = Double.toString(measureResult.get(neighborAddress).get(0)); 
+                            neighborEdge.setAttribute("delay", delay);
+                            String throughput = Double.toString(measureResult.get(neighborAddress).get(1));
+                            neighborEdge.setAttribute("throughput", throughput);
+                        }
+                    }
                 }
             }
         }
@@ -2676,6 +2708,28 @@ public class ControllerService extends Thread {
                 sendDefaultFlowPathsUpdate();
             if (trafficEngineeringPolicy == TrafficEngineeringPolicy.SINGLE_FLOW || trafficEngineeringPolicy == TrafficEngineeringPolicy.QUEUES || trafficEngineeringPolicy == TrafficEngineeringPolicy.TRAFFIC_SHAPING)
                 sendFlowPrioritiesUpdate();
+
+            System.out.println("==================");
+            System.out.println("==================");
+            int i=0;
+            for(Edge e : topologyGraph.getEachEdge()){
+                i = i + 1;
+                System.out.println(i + " : ");
+                System.out.println(e.getAttribute("ui.label").toString());
+                System.out.println("node0 = " + e.getNode0().getId());
+                System.out.println("node1 = " + e.getNode1().getId());
+                if(e.getAttribute("delay") != null){
+                    System.out.println("delay = " + e.getAttribute("delay").toString());
+                }else{
+                    System.out.println("delay = not ready");
+                }
+                if(e.getAttribute("throughput") != null){
+                    System.out.println("throughput = " + e.getAttribute("throughput").toString());
+                }else{
+                    System.out.println("throughput = not ready");
+                }
+                System.out.println("**************");
+            }
         }
 
         @Override
