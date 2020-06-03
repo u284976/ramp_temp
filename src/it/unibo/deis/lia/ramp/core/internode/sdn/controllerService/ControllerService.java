@@ -1495,6 +1495,12 @@ public class ControllerService extends Thread {
              * them (targetNodeId, sourceNodeAddress)
              */
             HashMap<String, List<String>> removedNodesAddresses = new HashMap<>();
+
+            /**
+             * adder @u284976
+             * in order to restore attribute on the Edge
+             */
+            Graph cloneGraph = Graphs.clone(topologyGraph);
             /*
              * If the source node doesn't exist in the topology graph, create it
              */
@@ -1618,6 +1624,22 @@ public class ControllerService extends Thread {
                                     if (subnetInfo.isInRange(sourceNodeAddress)) {
                                         neighborEdge.addAttribute("address_" + sourceGraphNode.getId(), sourceNodeAddress);
                                         neighborEdge.addAttribute("ui.label", sourceNodeAddress + " - " + neighborEdge.getAttribute("ui.label"));
+                                        
+                                        /**
+                                         * adder @u284976
+                                         * to restore edge attribute about delay and throughput
+                                         */ 
+                                        MultiNode oldNeighbor = cloneGraph.getNode(neighborGraphNode.getId());
+                                        Collection<Edge> oldEdges = oldNeighbor.getEdgeSetBetween(sourceGraphNode.getId());
+                                        for(Edge e : oldEdges){
+                                            String oldAddr = e.getAttribute("address_"+sourceGraphNode.getId());
+                                            if(oldAddr!=null){
+                                                if(oldAddr==sourceNodeAddress){
+                                                    neighborEdge.addAttribute("delay", (String)e.getAttribute("delay"));
+                                                    neighborEdge.addAttribute("throughput", (String)e.getAttribute("throughput"));
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -1667,9 +1689,9 @@ public class ControllerService extends Thread {
                             //     neighborEdge.removeAttribute("throughput");
                             // }
                             String delay = Double.toString(measureResult.get(neighborAddress).get(0)); 
-                            neighborEdge.setAttribute("delay", delay);
+                            neighborEdge.addAttribute("delay", delay);
                             String throughput = Double.toString(measureResult.get(neighborAddress).get(1));
-                            neighborEdge.setAttribute("throughput", throughput);
+                            neighborEdge.addAttribute("throughput", throughput);
                         }
                     }
                 }
@@ -2718,27 +2740,27 @@ public class ControllerService extends Thread {
                 sendFlowPrioritiesUpdate();
 
             // adder @u284976
-            System.out.println("==================");
-            System.out.println("==================");
-            int i=0;
-            for(Edge e : topologyGraph.getEachEdge()){
-                i = i + 1;
-                System.out.println(i + " : ");
-                System.out.println(e.getAttribute("ui.label").toString());
-                System.out.println("node0 = " + e.getNode0().getId());
-                System.out.println("node1 = " + e.getNode1().getId());
-                if(e.getAttribute("delay") != null){
-                    System.out.println("delay = " + e.getAttribute("delay").toString());
-                }else{
-                    System.out.println("delay = not ready");
-                }
-                if(e.getAttribute("throughput") != null){
-                    System.out.println("throughput = " + e.getAttribute("throughput").toString());
-                }else{
-                    System.out.println("throughput = not ready");
-                }
-                System.out.println("**************");
-            }
+            // System.out.println("==================");
+            // System.out.println("==================");
+            // int i=0;
+            // for(Edge e : topologyGraph.getEachEdge()){
+            //     i = i + 1;
+            //     System.out.println(i + " : ");
+            //     System.out.println(e.getAttribute("ui.label").toString());
+            //     System.out.println("node0 = " + e.getNode0().getId());
+            //     System.out.println("node1 = " + e.getNode1().getId());
+            //     if(e.getAttribute("delay") != null){
+            //         System.out.println("delay = " + e.getAttribute("delay").toString());
+            //     }else{
+            //         System.out.println("delay = not ready");
+            //     }
+            //     if(e.getAttribute("throughput") != null){
+            //         System.out.println("throughput = " + e.getAttribute("throughput").toString());
+            //     }else{
+            //         System.out.println("throughput = not ready");
+            //     }
+            //     System.out.println("**************");
+            // }
         }
 
         @Override

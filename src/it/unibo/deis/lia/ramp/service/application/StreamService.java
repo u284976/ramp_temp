@@ -170,6 +170,7 @@ public class StreamService extends Thread {
                                         || name.endsWith(".ts")
                                         || name.endsWith(".wmv")
                                         || name.endsWith(".3gp")
+                                        || name.endsWith(".mp4")
                         );
             }
         };
