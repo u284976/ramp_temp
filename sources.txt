@@ -25,6 +25,7 @@
 ./src/test/iotos/SDNClient.java
 ./src/test/iotos/CollectNetworkInfoClient.java
 ./src/test/iotos/ClientMeasurer.java
+./src/test/iotos/GeneticAlgo.java
 ./src/test/iotos/SDNController.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceManager.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceDiscoveryAgent.java

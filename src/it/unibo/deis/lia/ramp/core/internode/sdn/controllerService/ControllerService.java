@@ -990,6 +990,14 @@ public class ControllerService extends Thread {
         }
         System.out.println("ControllerService: data plane rule: " + dataPlaneRule + " removed for data type: " + dataType);
     }
+    /**
+     * @add u284976
+     * for pathSelect to get flow applicationRequirement
+     */
+    public Map<Integer, ApplicationRequirements> getFlowApplicationRequirements(){
+        return flowApplicationRequirements;
+    }
+
 
 
     @Override
@@ -1651,7 +1659,7 @@ public class ControllerService extends Thread {
                         String label = neighborEdge.getAttribute("ui.label");
                         if(label.contains(neighborAddress)){
                             System.out.println("=============");
-                            System.out.println("setup delay and throughput");
+                            System.out.println("setup delay and throughput from : " + clientNodeId);
                             // if(neighborEdge.getAttribute("delay") != null){
                             //     neighborEdge.removeAttribute("delay");
                             // }
@@ -2709,6 +2717,7 @@ public class ControllerService extends Thread {
             if (trafficEngineeringPolicy == TrafficEngineeringPolicy.SINGLE_FLOW || trafficEngineeringPolicy == TrafficEngineeringPolicy.QUEUES || trafficEngineeringPolicy == TrafficEngineeringPolicy.TRAFFIC_SHAPING)
                 sendFlowPrioritiesUpdate();
 
+            // adder @u284976
             System.out.println("==================");
             System.out.println("==================");
             int i=0;
