@@ -27,6 +27,15 @@ public class ApplicationRequirements implements Serializable {
      */
     private int duration;
 
+    /**
+     * adder u284976
+     * for formal method's Possion process parameter
+     * lamda = pakcet rate
+     * n = packet length
+     */
+    private int packetRate;
+    private int packetLength;
+
     public ApplicationRequirements(TrafficType trafficType, int bitrate,
                                    int trafficAmount, int secondsToStart, int duration) {
         this.trafficType = trafficType;
@@ -34,6 +43,19 @@ public class ApplicationRequirements implements Serializable {
         this.trafficAmount = trafficAmount;
         this.secondsToStart = secondsToStart;
         this.duration = duration;
+    }
+
+    // adder u284976
+    public ApplicationRequirements(TrafficType trafficType, int payloadSize, int GenPacketPerSeconds){
+        this.trafficType = trafficType;
+        this.packetRate = GenPacketPerSeconds;
+        this.packetLength = payloadSize;
+    }
+    public int getPacketRate(){
+        return packetRate;
+    }
+    public int getPakcetLength(){
+        return packetLength;
     }
 
     public TrafficType getTrafficType() {

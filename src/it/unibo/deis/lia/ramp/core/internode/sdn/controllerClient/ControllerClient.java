@@ -459,7 +459,6 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                 flowId = ThreadLocalRandom.current().nextInt();
             if (this.routingPolicy == RoutingPolicy.REROUTING) {
                 flowPathDescriptor = sendNewPathRequest(destNodeIds, applicationRequirements, pathSelectionMetric, flowId);
-
                 /*
                  * Save the new path in the ControllerClient database.
                  */

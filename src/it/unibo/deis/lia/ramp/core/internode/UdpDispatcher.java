@@ -388,17 +388,17 @@ public class UdpDispatcher extends Thread {
                             }
 
                             // TODO REMOVE ME
-                            // DatagramSocket destS = new DatagramSocket();
-                            // try {
-                            //     destS.setReuseAddress(true);
-                            //     DatagramPacket destDp = new DatagramPacket(bufferDest, bufferDest.length, neighbors.elementAt(i), Dispatcher.DISPATCHER_PORT);
-                            //     destS.send(destDp);
-                            // } catch (Exception e) {
-                            //     System.out.println("UdpDispatcherHandler: failed to send to " + neighbors.elementAt(i) + ":" + Dispatcher.DISPATCHER_PORT + " (" + e.getMessage() + ")");
-                            //     // e.printStackTrace();
-                            // } finally {
-                            //     destS.close();
-                            // }
+                            DatagramSocket destS = new DatagramSocket();
+                            try {
+                                destS.setReuseAddress(true);
+                                DatagramPacket destDp = new DatagramPacket(bufferDest, bufferDest.length, neighbors.elementAt(i), Dispatcher.DISPATCHER_PORT);
+                                destS.send(destDp);
+                            } catch (Exception e) {
+                                System.out.println("UdpDispatcherHandler: failed to send to " + neighbors.elementAt(i) + ":" + Dispatcher.DISPATCHER_PORT + " (" + e.getMessage() + ")");
+                                // e.printStackTrace();
+                            } finally {
+                                destS.close();
+                            }
                             // TODO REMOVE ME
                         }
                     }

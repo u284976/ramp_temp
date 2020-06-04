@@ -206,6 +206,12 @@ public class ControllerService extends Thread {
      */
     private PrintWriter printWriter;
 
+    /**
+     * @add u284976
+     * store flow's source nodeID
+     */
+    private Map<Integer,Integer> flowSources;
+
     private ControllerService() throws Exception {
         this.serviceSocket = E2EComm.bindPreReceive(PROTOCOL);
         ServiceManager.getInstance(false).registerService("SDNController", this.serviceSocket.getLocalPort(), PROTOCOL);
@@ -227,6 +233,8 @@ public class ControllerService extends Thread {
         this.flowStartTimes = new ConcurrentHashMap<>();
         this.flowPathSelectionMetrics = new ConcurrentHashMap<>();
         this.flowApplicationRequirements = new ConcurrentHashMap<>();
+        // @adder u284976 initial flowSources
+        this.flowSources = new ConcurrentHashMap<>();
 
         this.flowPriorities = new ConcurrentHashMap<>();
         this.flowPrioritySelector = new TrafficTypeFlowPrioritySelector();
@@ -997,6 +1005,13 @@ public class ControllerService extends Thread {
     public Map<Integer, ApplicationRequirements> getFlowApplicationRequirements(){
         return flowApplicationRequirements;
     }
+    /**
+     * @add u284976
+     * for pathSelect to get flow source 
+     */
+    public Map<Integer,Integer> getflowSources(){
+        return flowSources;
+    }
 
 
 
@@ -1209,6 +1224,10 @@ public class ControllerService extends Thread {
                     flowStartTimes.put(flowId, now);
                     flowApplicationRequirements.put(flowId, applicationRequirements);
                     flowPathSelectionMetrics.put(flowId, pathSelectionMetric);
+
+                    // @add u284976 for store flow Source
+                    // Logically, all if-else blocks must add this instruction, but i only used this block
+                    flowSources.put(flowId,clientNodeId);
                 }
             } else if (applicationRequirements == null && flowId != GenericPacket.UNUSED_FIELD) {
                 /*
@@ -1680,8 +1699,8 @@ public class ControllerService extends Thread {
                     for(Edge neighborEdge : sourceGraphNode.getEachEdge()){
                         String label = neighborEdge.getAttribute("ui.label");
                         if(label.contains(neighborAddress)){
-                            System.out.println("=============");
-                            System.out.println("setup delay and throughput from : " + clientNodeId);
+                            // System.out.println("=============");
+                            // System.out.println("setup delay and throughput from : " + clientNodeId);
                             // if(neighborEdge.getAttribute("delay") != null){
                             //     neighborEdge.removeAttribute("delay");
                             // }
@@ -2682,6 +2701,8 @@ public class ControllerService extends Thread {
                     flowApplicationRequirements.remove(flowId);
                     flowPathSelectionMetrics.remove(flowId);
                     flowPaths.remove(flowId);
+                    // @adder u284976
+                    flowSources.remove(flowId);
                 }
             }
         }
