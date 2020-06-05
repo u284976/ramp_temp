@@ -35,6 +35,8 @@ public class ApplicationRequirements implements Serializable {
      */
     private int packetRate;
     private int packetLength;
+    private Double requireDelay;
+    private Double requireThroughput;
 
     public ApplicationRequirements(TrafficType trafficType, int bitrate,
                                    int trafficAmount, int secondsToStart, int duration) {
@@ -46,10 +48,14 @@ public class ApplicationRequirements implements Serializable {
     }
 
     // adder u284976
-    public ApplicationRequirements(TrafficType trafficType, int payloadSize, int GenPacketPerSeconds){
+    public ApplicationRequirements(TrafficType trafficType, int payloadSize, int GenPacketPerSeconds,
+                                    Double requireDelay, Double requireThroughput, int duration){
         this.trafficType = trafficType;
         this.packetRate = GenPacketPerSeconds;
         this.packetLength = payloadSize;
+        this.requireDelay = requireDelay;
+        this.requireThroughput = requireThroughput;
+        this.duration = duration;
     }
     public int getPacketRate(){
         return packetRate;
@@ -57,6 +63,16 @@ public class ApplicationRequirements implements Serializable {
     public int getPakcetLength(){
         return packetLength;
     }
+    public Double getRequireDelay(){
+        return requireDelay;
+    }
+    public Double getRequireThroughput(){
+        return requireThroughput;
+    }
+
+
+
+
 
     public TrafficType getTrafficType() {
         return trafficType;

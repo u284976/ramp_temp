@@ -26,6 +26,8 @@ public class GeneticAlgo implements TopologyGraphSelector{
     
     private Graph topologyGraph;
 
+    private double fitnessThreshold = 100;
+
     public GeneticAlgo(Graph topologyGraph){
         this.topologyGraph = topologyGraph;
     }
@@ -36,16 +38,39 @@ public class GeneticAlgo implements TopologyGraphSelector{
         PathDescriptor tempPath = new BreadthFirstFlowPathSelector(topologyGraph).selectPath(sourceNodeId, destNodeId, null, null);
         Graph checkGraph = Graphs.clone(topologyGraph);
 
-        Map<Integer,PathDescriptor> flowPaths = activePaths;
+        Map<Integer,PathDescriptor> flowPaths = new HashMap<Integer,PathDescriptor>();
+        for(int key : activePaths.keySet()){
+            PathDescriptor path = new PathDescriptor(activePaths.get(key).getPath(), activePaths.get(key).getPathNodeIds());
+            flowPaths.put(key,path);
+        }
+
         /**
          * GeneticAlgo need other flow requirement to calculate fitness value
          */
-        Map<Integer,ApplicationRequirements> flowAR = ControllerService.getInstance().getFlowApplicationRequirements();
+        Map<Integer,ApplicationRequirements> originAR = ControllerService.getInstance().getFlowApplicationRequirements();
+        Map<Integer,ApplicationRequirements> flowAR = new HashMap<Integer,ApplicationRequirements>();
+        for(int key : originAR.keySet()){
+            ApplicationRequirements AR = new ApplicationRequirements(
+                originAR.get(key).getTrafficType(),
+                originAR.get(key).getPakcetLength(),
+                originAR.get(key).getPacketRate(),
+                originAR.get(key).getRequireDelay(),
+                originAR.get(key).getRequireThroughput(),
+                originAR.get(key).getDuration()
+            );
+            flowAR.put(key, AR);
+        }
         /**
          * flowPath only store passing by nodeID and NetworkInterfaceCard
          * so needed additional request the node that proposed the flow request
+         * which means flow Source
          */
-        Map<Integer,Integer> flowSources = ControllerService.getInstance().getflowSources();
+        Map<Integer,Integer> originSource = new HashMap<>(ControllerService.getInstance().getflowSources());
+        HashMap<Integer,Integer> flowSources = new HashMap<Integer,Integer>();
+        for(int key : originSource.keySet()){
+            Integer SourceID = originSource.get(key);
+            flowSources.put(key, SourceID);
+        }
 
         // flowID = 1 is mean default flow, it will not duplicate other existing FlowID
         flowPaths.put(1, tempPath);
@@ -53,6 +78,27 @@ public class GeneticAlgo implements TopologyGraphSelector{
         flowSources.put(1, sourceNodeId);
 
         formalMethod(checkGraph, flowPaths, flowAR, flowSources, sourceNodeId);
+
+        Map<Integer,Double> flowDelays = new HashMap<>();
+        Map<Integer,Double> flowThroughputs = new HashMap<>();
+        for(int flowID : flowPaths.keySet()){
+            MultiNode lastNode = checkGraph.getNode(Integer.toString(flowID));
+            flowDelays.put(flowID, lastNode.getAttribute(Integer.toString(flowID) + "delayOut"));
+            flowThroughputs.put(flowID, lastNode.getAttribute(Integer.toString(flowID) + "minThroughput"));
+        }
+
+        Map<Integer,Double> flowFits = calculateFitness(flowAR,flowDelays,flowThroughputs);
+
+        boolean allFit = true;
+        for(Integer flowID : flowFits.keySet()){
+            if(flowFits.get(flowID) > fitnessThreshold){
+                allFit = false;
+            }
+        }
+        if(allFit){
+            return tempPath;
+        }
+        
 
         PathDescriptor path = null;
         return path;
@@ -76,6 +122,12 @@ public class GeneticAlgo implements TopologyGraphSelector{
          * total : future total number of flow on this node
          * lamda : Possion process parameter means packet rate
          * n : Possion process parameter means packet length
+         * 
+         * 2020-06-05:
+         * delete "cur" and "total"
+         * because originally these two parameters were the rules set by paper author to run the formal method
+         * but here is my own program, so i can ensure that "lamda" and "n" will complete setup
+         * then go to the next step
          */
         for(Node node : tempGraph.getEachNode()){
             // Map<String,Double> nodeState = new HashMap<>();
@@ -84,15 +136,20 @@ public class GeneticAlgo implements TopologyGraphSelector{
             // nodeState.put("lamda", 0.0);
             // nodeState.put("n", 0.0);
             // node.addAttribute("nodeState", nodeState);
-            node.addAttribute("total", 0);
-            node.addAttribute("cur", 0);
+            
+            // node.addAttribute("total", 0);
+            // node.addAttribute("cur", 0);
             node.addAttribute("lamda", 0);
             node.addAttribute("n", 0);
         }
 
         /**
          * 2020-06-04
-         * setup "total" attribute by "flowPath"
+         * setup "lamda","n" attribute by "flowPath"
+         * 
+         * lamda = combine lamda    <---- see code or paper
+         * n = combine n            <---- see code or paper
+         * 
          * but flowPath only store target node
          * ex A certain flow about "S" to "D", through M1,M2 like below:
          *   S---->M1---->M2---->D
@@ -104,139 +161,147 @@ public class GeneticAlgo implements TopologyGraphSelector{
          * ===========================================
          * requires attention!!!
          * path.getPathNodeIds() is List<Integer> include Source, ex S,M1,M2,D
-         * path.getPath() is String[] "not" include Source only M1,M2,D NetworkInterfaceCard
+         * path.getPath() is String[] "not" include Source, only M1,M2,D NetworkInterfaceCard address
          */
         for(int flowID : flowPaths.keySet()){
+            // TODO: restore to version of no change flowPath
             PathDescriptor path = flowPaths.get(flowID);
             List<Integer> pathNodeID = path.getPathNodeIds();
             pathNodeID.add(0, flowSources.get(flowID));
             path.setPathNodeIds(pathNodeID);
             flowPaths.put(flowID, path);
 
+            double flow_lamda = (double)flowAR.get(flowID).getPacketRate();
+            double flow_n = (double)flowAR.get(flowID).getPakcetLength();
             for(int nodeID : pathNodeID){
                 MultiNode node = tempGraph.getNode(Integer.toString(nodeID));
-                int total = (int)node.getAttribute("total");
-                total = total + 1;
-                node.addAttribute("total", total);
+                double oldLamda = (double)node.getAttribute("lamda");
+                double oldN = (double)node.getAttribute("n");
+
+                double new_lamda = oldLamda + flow_lamda;
+                double new_n = (flow_lamda*flow_n + oldLamda*oldN) / new_lamda;
+
+                node.addAttribute("lamda", new_lamda);
+                node.addAttribute("n", new_n);
             }
         }
-        // version : 2020-06-04
-        // for(int key : flowPaths.keySet()){
-        //     // by flowPath
-        //     for(int nodeID : flowPaths.get(key).getPathNodeIds()){
-        //         MultiNode node = tempGraph.getNode(Integer.toString(nodeID));
-        //         int total = (int)node.getAttribute("total");
-        //         total = total + 1;
-        //         node.addAttribute("total", total);
-        //     }
-        //     // by flowSources
-        //     MultiNode node = tempGraph.getNode(Integer.toString(flowSources.get(key)));
-        //     int total = (int)node.getAttribute("total");
-        //     total = total + 1;
-        //     node.addAttribute("total", total);
-        // }
 
-        boolean allCalculate = false;
-        Map<Integer,Boolean> calculate = new HashMap<>();
+        // for each flowPath
         for(int flowID : flowPaths.keySet()){
-            calculate.put(flowID, false);
-        }
-        /**
-         * starting and setup all flow source node
-         * cur++
-         * lamda = combine lamda    <---- see code or paper
-         * n = combine n            <---- see code or paper
-         */
-        for(int flowID : calculate.keySet()){
-            // version 2020-06-05
-            int source = flowPaths.get(flowID).getPathNodeIds().get(0);
-            // version 2020-06-04
-            // int source = flowSources.get(flowID);
-            String nodeID = Integer.toString(source);
-            MultiNode sourceNode = tempGraph.getNode(nodeID);
-            int current = (int)sourceNode.getAttribute("cur");
-            current = current + 1;
-            sourceNode.addAttribute("cur", current);
+            PathDescriptor path = flowPaths.get(flowID);
+            List<Integer> pathNodeIDs = path.getPathNodeIds();
+            // On the way of flow, the smallest throughput
+            double minThroughput;
 
-            double lamda = (double)sourceNode.getAttribute("lamda");
-            double flow_lamda = (double)flowAR.get(flowID).getPacketRate();
-            double new_lamda = lamda + flow_lamda;
+            // calculate   "application Layer ---> Dispatch" delay
+            MultiNode sourceNode = tempGraph.getNode(Integer.toString(pathNodeIDs.get(0)));
+            double maxThroughput = 0;
+            for(Edge edge : sourceNode.getEdgeSet()){
+                if((double)edge.getAttribute("throughput") > maxThroughput){
+                    maxThroughput = (double)edge.getAttribute("throughput");
+                }
+            }
+            minThroughput = maxThroughput;
 
-            double n = (double)sourceNode.getAttribute("n");
-            double flow_n = (double)flowAR.get(flowID).getPakcetLength();
-            double new_n = (flow_lamda*flow_n + lamda*n) / (flow_lamda*flow_n);
+            double sourceLamda = sourceNode.getAttribute("lamda");
+            double sourceN = sourceNode.getAttribute("n");
+            double capacity = maxThroughput - sourceLamda*sourceN;
+            if(capacity > 0){
+                String attributeDelayOut = Integer.toString(flowID) + "delayOut";
+                double delay = sourceN / capacity;
+                sourceNode.addAttribute(attributeDelayOut, delay);
 
-            sourceNode.addAttribute("lamda", new_lamda);
-            sourceNode.addAttribute("n", new_n);
-        }
+                String attributeMinThroughput = Integer.toString(flowID) + "minThroughput";
+                sourceNode.addAttribute(attributeMinThroughput, minThroughput);
+            }else{
+                // TODO: maitain this case, maybe node can't load so much
+            }
 
-        while(!allCalculate){
             /**
-             * to : evrey not calculated flow
-             * do : 
-             * flow accumulation
-             * flow processing
-             * flow propagation 
-             */ 
-            for(int flowID : calculate.keySet()){
-                PathDescriptor path = flowPaths.get(flowID);
+             * Recursive calculate "node ---> neighbor_node" delay
+             * until second last node
+             */
+            for(int i=0 ; i<pathNodeIDs.size()-1 ; i++){
+                MultiNode lastNode = tempGraph.getNode(Integer.toString(pathNodeIDs.get(i)));
+                MultiNode node = tempGraph.getNode(Integer.toString(pathNodeIDs.get(i+1)));
+
                 /**
-                 * recursive to lastnode - 1, such that for loop execute until last edge 
-                 * which is between lastnode-1 and lastnode
+                 * Attention!!!
+                 * path.getPathNodeIds() is List<Integer> include Source, ex S,M1,M2,D
+                 * path.getPath() is String[] "not" include Source, only M1,M2,D NetworkInterfaceCard address
                  */
-                for(int i=0 ; i<path.getPathNodeIds().size()-1 ; i++){
-                    String nodeID = Integer.toString(path.getPathNodeIds().get(i));
-                    String nextNodeID = Integer.toString(path.getPathNodeIds().get(i+1));
-                    MultiNode node = tempGraph.getNode(nodeID);
-                    MultiNode nextNode = tempGraph.getNode(nextNodeID);
-                    String nextAddress = path.getPath()[i];
+                String nextAddr = path.getPath()[i];
+                for(Edge edge : lastNode.getEdgeSetBetween(node)){
+                    /**
+                     * maybe have multiple link to one neighbor node
+                     * so only select that target Network Interface Card address
+                     */
+                    if(edge.getAttribute("address_" + Integer.toString(pathNodeIDs.get(i+1))) == nextAddr){
+                        double delayIn = lastNode.getAttribute(Integer.toString(flowID) + "delayOut");
 
-                    // maybe more than one edge between two node
-                    for(Edge edge : node.getEdgeSetBetween(nextNode)){
+                        double lamda = node.getAttribute("lamda");
+                        double n = node.getAttribute("n");
+                        double throughput = edge.getAttribute("throughput");
+                        if(throughput < minThroughput){
+                            minThroughput = throughput;
+                        }
 
+                        double cap = throughput - lamda*n;
+                        if(cap > 0){
+                            String attributeDelayOut = Integer.toString(flowID) + "delayOut";
+                            double delay = (n / cap) + delayIn;
+                            node.addAttribute(attributeDelayOut, delay);
+
+                            String attributeMinThroughput = Integer.toString(flowID) + "minThroughput";
+                            node.addAttribute(attributeMinThroughput, minThroughput);
+                        }else{
+                            // TODO: maitain this case, maybe node can't load so much
+                        }
+                        break;
                     }
-
-                }
-            }
-
-
-
-            allCalculate = true;
-            for(int flowID : calculate.keySet()){
-                if(calculate.get(flowID) == false){
-                    allCalculate = false;
-                }else{
-                    calculate.remove(flowID);
                 }
             }
         }
-
     }
+    private Map<Integer,Double> calculateFitness(Map<Integer,ApplicationRequirements> flowAR,
+                                    Map<Integer,Double> flowDelays,
+                                    Map<Integer,Double> flowThroughputs){
+        Map<Integer,Double> flowFits = new HashMap<>();
+        for(int flowID : flowAR.keySet()){
+            TrafficType trafficType = flowAR.get(flowID).getTrafficType();
+            /**
+             * weight of parameter
+             * a - for delay
+             * b - for throughput
+             */
+            double a;
+            double b;
+            if(trafficType.equals(TrafficType.VIDEO_STREAM)){
+                a = 1;
+                b = 0;
+            }else if(trafficType.equals(TrafficType.FILE_TRANSFER)){
+                a = 0;
+                b = 1;
+            }else{
+                a = 1;
+                b = 1;
+            }
+            double AR_Delay = flowAR.get(flowID).getRequireDelay();
+            double AR_Throughput = flowAR.get(flowID).getRequireThroughput();
+            double measure_delay = flowDelays.get(flowID);
+            double measure_throughput = flowThroughputs.get(flowID);
 
-    private double calculateFitness(ApplicationRequirements applicationRequirement, Map<String,Double> measureResult){
-        TrafficType trafficType = applicationRequirement.getTrafficType();
-        /**
-         * weight of parameter
-         * a - for delay
-         * b - for throughput
-         */
-        double a;
-        double b;
-        if(trafficType.equals(TrafficType.VIDEO_STREAM)){
-            a = 1;
-            b = 0;
-        }else if(trafficType.equals(TrafficType.FILE_TRANSFER)){
-            a = 0;
-            b = 1;
+            /**
+             * smaller fitness value is better
+             * if value is negative, let value = 0
+             */
+            double Fitness = a * (measure_delay - AR_Delay) + b * (AR_Throughput - measure_throughput);
+            if(Fitness < 0){
+                Fitness = 0;
+            }
+            flowFits.put(flowID, Fitness);
         }
 
-        // measure_delay must lower than required_delay
-        double delay = measureResult.get("delay");
-        // measure_throughput mest higher than require_throughput
-        double throughput = measureResult.get("throughput");
-        double fitness = 0;
-
-
-        return 0;
+        return flowFits;
     }
 }
