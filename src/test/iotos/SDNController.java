@@ -1,8 +1,12 @@
 package test.iotos;
 
 import it.unibo.deis.lia.ramp.RampEntryPoint;
+import it.unibo.deis.lia.ramp.core.e2e.BoundReceiveSocket;
+import it.unibo.deis.lia.ramp.core.e2e.E2EComm;
+import it.unibo.deis.lia.ramp.core.internode.Dispatcher;
 import it.unibo.deis.lia.ramp.core.internode.sdn.controllerClient.ControllerClient;
 import it.unibo.deis.lia.ramp.core.internode.sdn.controllerService.ControllerService;
+import it.unibo.deis.lia.ramp.service.management.ServiceManager;
 
 public class SDNController{
     
@@ -10,7 +14,9 @@ public class SDNController{
 
     static ControllerClient controllerClient;
 
-    static RampEntryPoint ramp;
+	static RampEntryPoint ramp;
+	
+	static int countClient = 3;
 
 
     public static void main(String[] args){
@@ -38,22 +44,50 @@ public class SDNController{
         }));
         
         controllerService = ControllerService.getInstance();
+		controllerService.setCountClient(countClient);
+		
 
         try {
-			Thread.sleep(2*1000);
+			Thread.sleep(5*1000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		
 		controllerClient = ControllerClient.getInstance();
 		
-		try {
-			Thread.sleep(2*1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		/**
+         * register service and waiting message by other client
+         */
+        BoundReceiveSocket applicationSocket = null;
+        try{
+            applicationSocket = E2EComm.bindPreReceive(E2EComm.UDP);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        String nodeID = Integer.toString(Dispatcher.getLocalRampId());
+        ServiceManager.getInstance(false).registerService(
+            "application" + nodeID,             // serviceName
+            applicationSocket.getLocalPort(),   // servicePort
+            E2EComm.UDP                         // protocol
+        );
 
+        System.out.println("========================================");
+        System.out.println("register Service to local management done!!");
+        System.out.println("========================================");
 
-        // controllerService.displayGraph();
-    }
+		controllerService.displayGraph();
+
+		while(true){
+			try {
+				Thread.sleep(10*1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			if(controllerService.getActiveClients().size() >= countClient){
+				if(controllerService.checkTopoComplete()){
+					break;
+				}
+			}
+		}		
+	}
 }

@@ -52,6 +52,7 @@ import it.unibo.deis.lia.ramp.service.management.ServiceResponse;
 import it.unibo.deis.lia.ramp.util.NetworkInterfaceStats;
 import it.unibo.deis.lia.ramp.util.NodeStats;
 import test.iotos.ClientMeasurer;
+import test.iotos.ControllerMessageReady;
 import test.iotos.messagetype.MeasureMessage;
 
 import org.graphstream.graph.Graph;
@@ -242,7 +243,13 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
      */
     private PrintWriter printWriterRules;
 
+    /**
+     * add u284976
+     * clientMeasurer : Server of measure action
+     * readyToTest : to check controller state 
+     */
     private ClientMeasurer clientMeasurer;
+    private long readyToTest;
 
     private ControllerClient() {
 
@@ -269,8 +276,11 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
          * adder @u284976
          * for measure the "one hop" link capability (delay and throughput)
          * create a ramp middleware service, and waiting by other client send request
+         * 
+         * readyToTest initial is 0(false)
          */
         clientMeasurer = ClientMeasurer.getInstance();
+        readyToTest = 0;
 
         /*
          * Make sure this manager is always instantiated before any other DataPlaneForwarder
@@ -1316,6 +1326,14 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
         System.out.println("ControllerClient FINISHED");
     }
 
+    /**
+     * add u284976
+     * get ready to test
+     */
+    public long getReadyToTest(){
+        return readyToTest;
+    }
+
     private class PacketHandler extends Thread {
 
         private GenericPacket gp;
@@ -1435,6 +1453,10 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                             break;
                         case DATA_PLANE_REMOVE_RULE:
                             handleDataPlaneRemoveRule((ControllerMessageUpdate) controllerMessage);
+                            break;
+                        // add u284976
+                        case READY_TO_TEST:
+                            handleReadyToTest((ControllerMessageReady) controllerMessage);
                             break;
                         default:
                             break;
@@ -1880,6 +1902,16 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
             dataPlaneRulesManager.removeDataPlaneRule(dataType, dataPlaneRule);
             System.out.println("ControllerClient: DATA_PLANE_REMOVE_RULE:  remove rule: " + dataPlaneRule + " for dataType: " + dataType + " received from the controller and successfully applied");
         }
+
+        private void handleReadyToTest(ControllerMessageReady messageUpdate){
+            readyToTest = messageUpdate.getStartTime();
+            
+            /**
+             * TODO : Remove
+             * May be tested more than once, needed continuous measure
+             */
+            // clientMeasurer.tryOccupy();
+        }
     }
 
     private class UpdateManager extends Thread {
@@ -2023,7 +2055,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
 
                 while(!clientMeasurer.tryOccupy()){
                     sleep(1000);
-                    System.out.println("waiting a few seconds to occupy clientMeasure");
+                    System.out.println("wait a few seconds to occupy clientMeasure");
                 };
 
                 E2EComm.sendUnicast(
@@ -2106,7 +2138,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                                 // System.out.println("pre = " + pre);
                                 // System.out.println("elapsed = " + elapsed);
                                 // System.out.println("avgDelay = " + avgDelay);
-                                System.out.println("throughput = " + throughput + "Kbit/s");
+                                // System.out.println("throughput = " + throughput + "Kbit/s");
 
                                 msg = new MeasureMessage(MeasureMessage.Test_Done);
                                 E2EComm.sendUnicast(
@@ -2189,7 +2221,7 @@ public class ControllerClient extends Thread implements ControllerClientInterfac
                  * send measure request to one hop neighbor
                  */
                 try {
-                    Measure(); 
+                    Measure();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

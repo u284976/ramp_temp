@@ -279,7 +279,7 @@ public class UdpDispatcher extends Thread {
 
             // send to neighbor or to RIN?
             boolean sendToRin = Dispatcher.sendToRin(ipDest);
-            System.out.println("UdpDispatcherHandler UnicastPacket ipDest=" + ipDest + " sendToRin=" + sendToRin);
+            // System.out.println("UdpDispatcherHandler UnicastPacket ipDest=" + ipDest + " sendToRin=" + sendToRin);
             if (!sendToRin) {
                 // from object to byte[]
                 byte[] bufferDest = E2EComm.serializePacket(up);

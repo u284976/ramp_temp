@@ -8,5 +8,6 @@ public enum PathSelectionMetric {
     BREADTH_FIRST,
     FEWEST_INTERSECTIONS,
     MINIMUM_NETWORK_LOAD,
-    LONGEST_PATH
+    LONGEST_PATH,
+    GENETIC_ALGO    // add @u284976
 }

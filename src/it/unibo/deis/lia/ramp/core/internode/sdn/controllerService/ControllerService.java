@@ -53,6 +53,9 @@ import it.unibo.deis.lia.ramp.core.e2e.UnicastPacket;
 import it.unibo.deis.lia.ramp.service.management.ServiceManager;
 import it.unibo.deis.lia.ramp.util.NetworkInterfaceStats;
 import it.unibo.deis.lia.ramp.util.NodeStats;
+import test.iotos.ControllerMessageReady;
+import test.iotos.GeneticAlgo;
+
 import org.graphstream.ui.swingViewer.DefaultView;
 import org.graphstream.ui.view.Viewer;
 
@@ -211,6 +214,7 @@ public class ControllerService extends Thread {
      * store flow's source nodeID
      */
     private Map<Integer,Integer> flowSources;
+    private int countClient;
 
     private ControllerService() throws Exception {
         this.serviceSocket = E2EComm.bindPreReceive(PROTOCOL);
@@ -449,6 +453,9 @@ public class ControllerService extends Thread {
                 pathSelector = new MinimumNetworkLoadFlowPathSelector((providedGraph == null) ? topologyGraph : providedGraph);
             else if (pathSelectionMetric == PathSelectionMetric.LONGEST_PATH) {
                 pathSelector = new LongestPathSelector((providedGraph == null) ? topologyGraph : providedGraph);
+            }else if(pathSelectionMetric == PathSelectionMetric.GENETIC_ALGO){
+                // @add u284976
+                pathSelector = new GeneticAlgo((providedGraph == null) ? topologyGraph : providedGraph);
             }
         }
 
@@ -1012,7 +1019,57 @@ public class ControllerService extends Thread {
     public Map<Integer,Integer> getflowSources(){
         return flowSources;
     }
+    /**
+     * @adder u284976
+     * Modify the number of client nodes for this test
+     */
+    public void setCountClient(int countClient) {
+        this.countClient = countClient;
+    }
+    public boolean checkTopoComplete(){
+        boolean allSet = true;
+        for(Node node : topologyGraph.getEachNode()){
+            int edgeCount = 0;
+            for(Edge edge : node.getEachEdge()){
+                if(edge.getAttribute("throughput") == null){
+                    allSet = false;
+                    break;
+                }
+                edgeCount++;
+            }
+            if(edgeCount < 1){
+                allSet = false;
+                break;
+            }
+        }
 
+        for(Edge edge : topologyGraph.getEachEdge()){
+            System.out.println("***************************");
+            System.out.println(edge.getId() + ", throughput = " + edge.getAttribute("throughput"));
+            System.out.println("***************************");
+        }
+        
+        if(allSet){
+            System.out.println("================================");
+			System.out.println("controller notice to all client");
+			System.out.println("================================");
+            ControllerMessageReady updateMessage = new ControllerMessageReady(MessageType.READY_TO_TEST);
+
+            for (Node clientNode : topologyGraph.getNodeSet()) {
+                int clientNodeId = Integer.parseInt(clientNode.getId());
+
+                String[] clientDest = Resolver.getInstance(false).resolveBlocking(clientNodeId, 5 * 1000).get(0).getPath();
+                int clientPort = clientNode.getAttribute("port");
+                try {
+                    E2EComm.sendUnicast(clientDest, clientNodeId, clientPort, PROTOCOL, CONTROL_FLOW_ID, E2EComm.serialize(updateMessage));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        return allSet;
+    }
 
 
     @Override
@@ -1654,8 +1711,11 @@ public class ControllerService extends Thread {
                                             String oldAddr = e.getAttribute("address_"+sourceGraphNode.getId());
                                             if(oldAddr!=null){
                                                 if(oldAddr==sourceNodeAddress){
-                                                    neighborEdge.addAttribute("delay", (String)e.getAttribute("delay"));
-                                                    neighborEdge.addAttribute("throughput", (String)e.getAttribute("throughput"));
+                                                    if(e.getAttribute("delay")==null || e.getAttribute("throughput")==null){
+                                                        break;
+                                                    }
+                                                    neighborEdge.addAttribute("delay", (double)e.getAttribute("delay"));
+                                                    neighborEdge.addAttribute("throughput", (double)e.getAttribute("throughput"));
                                                 }
                                             }
                                         }
@@ -1680,11 +1740,12 @@ public class ControllerService extends Thread {
             sourceGraphNode.addAttribute("last_update", System.currentTimeMillis());
             System.out.println("ControllerService: topology update received from client " + clientNodeId + ", reachable neighbor nodes successfully updated for the client");
             for (Node node : topologyGraph.getNodeSet()) {
-                System.out.println("Topology node, id: " + node.getId());
+                // System.out.println("Topology node, id: " + node.getId());
                 for (Edge edge : node.getEachEdge()) {
-                    System.out.println("Node edge between " + edge.getNode0().getId() + " and " + edge.getNode1().getId());
-                    for (String key : edge.getAttributeKeySet())
-                        System.out.println("Node edge address " + key + ": " + edge.getAttribute(key));
+                    // System.out.println("Node edge between " + edge.getNode0().getId() + " and " + edge.getNode1().getId());
+                    for (String key : edge.getAttributeKeySet()){
+                        // System.out.println("Node edge address " + key + ": " + edge.getAttribute(key));
+                    }
                 }
             }
         }
@@ -1694,22 +1755,31 @@ public class ControllerService extends Thread {
             Map<String,List<Double>> measureResult = updateMessage.getMeasureResult();
             MultiNode sourceGraphNode = topologyGraph.getNode(Integer.toString(clientNodeId));
 
+            // System.out.println("=================================================");
+            // System.out.println("setup delay and throughput from : " + clientNodeId);
             if(sourceGraphNode != null){
                 for(String neighborAddress : measureResult.keySet()){
                     for(Edge neighborEdge : sourceGraphNode.getEachEdge()){
                         String label = neighborEdge.getAttribute("ui.label");
                         if(label.contains(neighborAddress)){
-                            // System.out.println("=============");
-                            // System.out.println("setup delay and throughput from : " + clientNodeId);
                             // if(neighborEdge.getAttribute("delay") != null){
                             //     neighborEdge.removeAttribute("delay");
                             // }
                             // if(neighborEdge.getAttribute("throughput") != null){
                             //     neighborEdge.removeAttribute("throughput");
                             // }
-                            String delay = Double.toString(measureResult.get(neighborAddress).get(0)); 
+                            double delay = measureResult.get(neighborAddress).get(0);
                             neighborEdge.addAttribute("delay", delay);
-                            String throughput = Double.toString(measureResult.get(neighborAddress).get(1));
+                            double throughput = measureResult.get(neighborAddress).get(1);
+                            /**
+                             * 100000 -> wired
+                             * 10000 -> wireless ( 40 meters)
+                             */
+                            if(throughput > 100000){
+                                throughput = 100000;
+                            }else if(throughput > 10000){
+                                throughput = 10000;
+                            }
                             neighborEdge.addAttribute("throughput", throughput);
                         }
                     }
@@ -2780,7 +2850,6 @@ public class ControllerService extends Thread {
             //     }else{
             //         System.out.println("throughput = not ready");
             //     }
-            //     System.out.println("**************");
             // }
         }
 

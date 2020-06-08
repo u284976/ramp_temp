@@ -326,7 +326,7 @@ public class E2EComm {
 
             InetAddress localhost = InetAddress.getLocalHost();
             //InetAddress localhost = InetAddress.getByName("127.0.0.1");
-            System.out.println("E2EComm.sendBroadcast udp localhost = " + localhost);
+            // System.out.println("E2EComm.sendBroadcast udp localhost = " + localhost);
             //(new UdpDispatcher.UdpDispatcherHandler(bp, localhost)).start();
             UdpDispatcher.asyncDispatchUdpGenericPacket(bp, localhost);
 
@@ -675,7 +675,7 @@ public class E2EComm {
                 up.setSourcePortAck(dsAck.getLocalPort());
             }
             InetAddress localhost = InetAddress.getLocalHost();
-            System.out.println("E2EComm.sendUnicast udp localhost = " + localhost);
+            // System.out.println("E2EComm.sendUnicast udp localhost = " + localhost);
             UdpDispatcher.asyncDispatchUdpGenericPacket(up, localhost);
 
         } else if (protocol == E2EComm.TCP) {
@@ -741,7 +741,7 @@ public class E2EComm {
             GenericPacket gpAck = null;
             try {
                 if (protocol == E2EComm.UDP) {
-                    System.out.println("E2EComm.sendUnicast udp ack localPort = " + uh.getSourcePortAck());
+                    // System.out.println("E2EComm.sendUnicast udp ack localPort = " + uh.getSourcePortAck());
                     byte[] udpBuffer = new byte[GenericPacket.MAX_UDP_PACKET];
                     //DatagramSocket ds = new DatagramSocket(uh.getSourcePortAck());
                     DatagramPacket dp = new DatagramPacket(udpBuffer, udpBuffer.length);
@@ -778,7 +778,7 @@ public class E2EComm {
                     }
                 }
             } catch (java.net.SocketTimeoutException ste) {
-                System.out.println("E2EComm.sendUnicast receive ack: ste = " + ste);
+                // System.out.println("E2EComm.sendUnicast receive ack: ste = " + ste);
                 if (ssAck != null)
                     ssAck.close();
                 res = false;
@@ -795,16 +795,16 @@ public class E2EComm {
                     if (ackPayload instanceof java.lang.String) {
                         String ackPayloadString = (String) ackPayload;
                         if (!ackPayloadString.equals("ack")) {
-                            System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayloadString = " + ackPayloadString);
+                            // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayloadString = " + ackPayloadString);
                             res = false;
                         }
                     } else {
-                        System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getName());
-                        System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getSimpleName());
+                        // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getName());
+                        // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getSimpleName());
                         res = false;
                     }
                 } else {
-                    System.out.println("E2EComm.sendUnicast receive ack FALSE: gpAck class = " + gpAck.getClass().getName());
+                    // System.out.println("E2EComm.sendUnicast receive ack FALSE: gpAck class = " + gpAck.getClass().getName());
                     res = false;
                 }
             }
@@ -1127,7 +1127,7 @@ public class E2EComm {
                     }
                 }
             } catch (java.net.SocketTimeoutException ste) {
-                System.out.println("E2EComm.sendUnicast receive ack: ste = " + ste);
+                // System.out.println("E2EComm.sendUnicast receive ack: ste = " + ste);
                 if (ssAck != null)
                     ssAck.close();
                 res = false;
@@ -1144,16 +1144,16 @@ public class E2EComm {
                     if (ackPayload instanceof java.lang.String) {
                         String ackPayloadString = (String) ackPayload;
                         if (!ackPayloadString.equals("ack")) {
-                            System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayloadString = " + ackPayloadString);
+                            // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayloadString = " + ackPayloadString);
                             res = false;
                         }
                     } else {
-                        System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getName());
-                        System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getSimpleName());
+                        // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getName());
+                        // System.out.println("E2EComm.sendUnicast receive ack FALSE: ackPayload class = " + ackPayload.getClass().getSimpleName());
                         res = false;
                     }
                 } else {
-                    System.out.println("E2EComm.sendUnicast receive ack FALSE: gpAck class = " + gpAck.getClass().getName());
+                    // System.out.println("E2EComm.sendUnicast receive ack FALSE: gpAck class = " + gpAck.getClass().getName());
                     res = false;
                 }
             }

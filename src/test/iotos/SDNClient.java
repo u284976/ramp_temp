@@ -1,8 +1,15 @@
 package test.iotos;
 
 import it.unibo.deis.lia.ramp.RampEntryPoint;
+import it.unibo.deis.lia.ramp.core.e2e.BoundReceiveSocket;
+import it.unibo.deis.lia.ramp.core.e2e.E2EComm;
+import it.unibo.deis.lia.ramp.core.internode.Dispatcher;
+import it.unibo.deis.lia.ramp.core.internode.sdn.applicationRequirements.ApplicationRequirements;
+import it.unibo.deis.lia.ramp.core.internode.sdn.applicationRequirements.TrafficType;
 import it.unibo.deis.lia.ramp.core.internode.sdn.controllerClient.ControllerClient;
+import it.unibo.deis.lia.ramp.core.internode.sdn.pathSelection.PathSelectionMetric;
 import it.unibo.deis.lia.ramp.service.management.ServiceDiscovery;
+import it.unibo.deis.lia.ramp.service.management.ServiceManager;
 import it.unibo.deis.lia.ramp.service.management.ServiceResponse;
 
 public class SDNClient{
@@ -10,6 +17,7 @@ public class SDNClient{
     static RampEntryPoint ramp;
 
     static ControllerClient controllerClient;
+
 
     public static void main(String[] args){
 
@@ -50,25 +58,142 @@ public class SDNClient{
 
         controllerClient = ControllerClient.getInstance();
 
+        System.out.println("========================================");
+        System.out.println("get controller client instance done!!!!!");
+        System.out.println("========================================");
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            //TODO: handle exception
+        }
+
+        /**
+         * register service and waiting message by other client
+         */
+        BoundReceiveSocket applicationSocket = null;
+        try{
+            applicationSocket = E2EComm.bindPreReceive(E2EComm.UDP);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        String nodeID = Integer.toString(Dispatcher.getLocalRampId());
+        ServiceManager.getInstance(false).registerService(
+            "application" + nodeID,             // serviceName
+            applicationSocket.getLocalPort(),   // servicePort
+            E2EComm.UDP                         // protocol
+        );
+
+        System.out.println("========================================");
+        System.out.println("register Service to local management done!!");
+        System.out.println("========================================");
+        try {
+            Thread.sleep(5000);
+        } catch (Exception e) {
+            //TODO: handle exception
+        }
+
+        // wait controller notice ( topo all edge are measure throughput complete)
+        long startTime = 0;
+        while (true) {
+            startTime = controllerClient.getReadyToTest();
+            if(startTime != 0){
+                break;
+            }
+
+            try {
+                Thread.sleep(5000);
+            } catch (Exception e) {
+                //TODO: handle exception
+            }
+        }
         
-        
+        ServiceResponse appService = null;
+        try {
+            switch (nodeID) {
+                // controller node
+                case "1":
+                    break;
+                case "2":
+                    appService = ServiceDiscovery.findServices(
+                        5,
+                        "application3",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "3":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application1",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
-        // try {
-        //     String[] addresses = new String[1];
-        //     addresses[0] = "10.0.0.1";
+        System.out.println("========================================");
+        System.out.println("find Service done!!!");
+        if(appService != null){
+            for(String s : appService.getServerDest()){
+                System.out.println(s);
+            }
+        }
+        System.out.println("========================================");
 
-        //     ServiceResponse service = ServiceDiscovery.findService(addresses, "SDNController");
+        ApplicationRequirements applicationRequirements = null;
+        if(nodeID.equals("2")){
+            applicationRequirements = new ApplicationRequirements(
+                TrafficType.VIDEO_STREAM,   // trafficType
+                1,                          // payloadSize
+                5,                          // GenPacketPerSeconds
+                1000.0,                     // requireDelay
+                2000.0,                     // requireThroughput
+                300                         // duration
+            );
+        }else if(nodeID.equals("3")){
+            applicationRequirements = new ApplicationRequirements(
+                TrafficType.FILE_TRANSFER,  // trafficType
+                100,                        // payloadSize
+                1,                          // GenPacketPerSeconds
+                3000.0,                     // requireDelay
+                2000.0,                     // requireThroughput
+                300                         // duration
+            );
+        }
 
-        //     System.out.println("=====================");
-        //     System.out.println(service.toString());
-        //     System.out.println("service node iD = " + service.getServerNodeId());
-        //     System.out.println("=====================");
+        int[] destNodeID = {appService.getServerNodeId()};
+        int[] destNodePort = {appService.getServerPort()};
 
+        while (System.currentTimeMillis() < startTime) {
+            try {
+                Thread.sleep(1000);
+            } catch (Exception e) {
+                //TODO: handle exception
+            }
+        }
 
-        // } catch (Exception e) {
-        // }
-        
+        System.out.println("========================================");
+        System.out.println("send request to SDNController!!!!!");
+        System.out.println("========================================");
+        int flowID = controllerClient.getFlowId(
+            applicationRequirements,
+            destNodeID,
+            destNodePort,
+            PathSelectionMetric.GENETIC_ALGO
+        );
+        System.out.println("========================================");
+        System.out.println("receive response!!!!!");
+        System.out.println("========================================");
+        String[] path = controllerClient.getFlowPath(appService.getServerNodeId(), flowID);
 
-        
+        for(String s : path){
+            System.out.println(s);
+        }
+        System.out.println("========================================");
+        System.out.println("process done!!!!!");
+        System.out.println("========================================");
     }
 }

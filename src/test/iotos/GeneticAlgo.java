@@ -82,22 +82,44 @@ public class GeneticAlgo implements TopologyGraphSelector{
         Map<Integer,Double> flowDelays = new HashMap<>();
         Map<Integer,Double> flowThroughputs = new HashMap<>();
         for(int flowID : flowPaths.keySet()){
-            MultiNode lastNode = checkGraph.getNode(Integer.toString(flowID));
+            /**
+             * in the formal method, i store "calculated" delay and throughput at the last node of flow
+             */
+            String lastNodeID = Integer.toString(flowPaths.get(flowID).getDestinationNodeId());
+            MultiNode lastNode = checkGraph.getNode(lastNodeID);
             flowDelays.put(flowID, lastNode.getAttribute(Integer.toString(flowID) + "delayOut"));
             flowThroughputs.put(flowID, lastNode.getAttribute(Integer.toString(flowID) + "minThroughput"));
         }
 
         Map<Integer,Double> flowFits = calculateFitness(flowAR,flowDelays,flowThroughputs);
 
+        System.out.println("10.0.0.1 - 10.0.0.2:");
+        System.out.println("throughput = " + checkGraph.getNode("1").getEdgeBetween("2").getAttribute("throughput"));
+        System.out.println("10.0.0.2 - 10.0.0.3:");
+        System.out.println("throughput = " + checkGraph.getNode("2").getEdgeBetween("3").getAttribute("throughput"));
+        
+
         boolean allFit = true;
         for(Integer flowID : flowFits.keySet()){
+            System.out.println("===========GeneticAlgo============");
+            System.out.println("fitness value of " + flowID + " is :" + flowFits.get(flowID));
+            System.out.println("require: delay = " + flowAR.get(flowID).getRequireDelay() + ", throughput = " + flowAR.get(flowID).getRequireThroughput());
+            System.out.println("predict: delay = " + flowDelays.get(flowID) + ", throughput = " + flowThroughputs.get(flowID));
+            System.out.println("===========GeneticAlgo============");
             if(flowFits.get(flowID) > fitnessThreshold){
                 allFit = false;
             }
         }
         if(allFit){
+            // in formal method, will modify the flowPath (add source into the pathNodeID),
+            // so neede remove it
+            List<Integer> pathNodeID = tempPath.getPathNodeIds();
+            pathNodeID.remove(0);
+
+            assert tempPath.getPath().length == tempPath.getPathNodeIds().size();
             return tempPath;
         }
+        // TODO: step :3
         
 
         PathDescriptor path = null;
@@ -106,8 +128,7 @@ public class GeneticAlgo implements TopologyGraphSelector{
 
     @Override
     public Map<Integer, PathDescriptor> getAllPathsFromSource(int sourceNodeId) {
-        // TODO:
-        Map<Integer, PathDescriptor> paths = new HashMap<>();
+        Map<Integer, PathDescriptor> paths = new BreadthFirstFlowPathSelector(topologyGraph).getAllPathsFromSource(sourceNodeId);
         return paths;
     }
     
@@ -139,8 +160,8 @@ public class GeneticAlgo implements TopologyGraphSelector{
             
             // node.addAttribute("total", 0);
             // node.addAttribute("cur", 0);
-            node.addAttribute("lamda", 0);
-            node.addAttribute("n", 0);
+            node.addAttribute("lamda", 0.0);
+            node.addAttribute("n", 0.0);
         }
 
         /**
@@ -164,7 +185,6 @@ public class GeneticAlgo implements TopologyGraphSelector{
          * path.getPath() is String[] "not" include Source, only M1,M2,D NetworkInterfaceCard address
          */
         for(int flowID : flowPaths.keySet()){
-            // TODO: restore to version of no change flowPath
             PathDescriptor path = flowPaths.get(flowID);
             List<Integer> pathNodeID = path.getPathNodeIds();
             pathNodeID.add(0, flowSources.get(flowID));
@@ -193,9 +213,12 @@ public class GeneticAlgo implements TopologyGraphSelector{
             // On the way of flow, the smallest throughput
             double minThroughput;
 
-            // calculate   "application Layer ---> Dispatch" delay
+            /**
+             * calculate   "application Layer ---> Dispatch" delay
+             * take node's max throughput with neighbor as "application Layer--->Dispatch" throughput
+             */
             MultiNode sourceNode = tempGraph.getNode(Integer.toString(pathNodeIDs.get(0)));
-            double maxThroughput = 0;
+            double maxThroughput = 0.0;
             for(Edge edge : sourceNode.getEdgeSet()){
                 if((double)edge.getAttribute("throughput") > maxThroughput){
                     maxThroughput = (double)edge.getAttribute("throughput");
@@ -227,8 +250,9 @@ public class GeneticAlgo implements TopologyGraphSelector{
 
                 /**
                  * Attention!!!
-                 * path.getPathNodeIds() is List<Integer> include Source, ex S,M1,M2,D
+                 * path.getPathNodeIds() is List<Integer> include Source, ex. {S,M1,M2,D}
                  * path.getPath() is String[] "not" include Source, only M1,M2,D NetworkInterfaceCard address
+                 * ex. {10.0.0.1, 10.0.0.2, 10.0.0.3}
                  */
                 String nextAddr = path.getPath()[i];
                 for(Edge edge : lastNode.getEdgeSetBetween(node)){

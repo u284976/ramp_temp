@@ -16,6 +16,7 @@ public enum MessageType {
     TOPOLOGY_GRAPH_RESPONSE,
     TOPOLOGY_UPDATE,
     TOPOLOGY_LINK_UPDATE,   // add by u284976, update neighbor link's capacity
+    READY_TO_TEST,          // add by u284976, controller noticy client "ready to test"
     PRIORITY_VALUE_REQUEST,
     MULTICAST_REQUEST,
     MULTICAST_CONTROL,

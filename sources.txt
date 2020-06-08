@@ -17,8 +17,11 @@
 ./src/test/sdncontroller/ControllerMessageTestReceiver.java
 ./src/test/sdncontroller/ControllerTest.java
 ./src/test/sdncontroller/ControllerClientMLRTestReceiver.java
+./src/test/iotos/copyARMap.java
 ./src/test/iotos/CollectNetworkInfoService.java
 ./src/test/iotos/iperfTest.java
+./src/test/iotos/copyPathMap.java
+./src/test/iotos/ControllerMessageReady.java
 ./src/test/iotos/graphdisplaytest.java
 ./src/test/iotos/messagetype/CollectNetworkInfoRequest.java
 ./src/test/iotos/messagetype/MeasureMessage.java
@@ -26,6 +29,7 @@
 ./src/test/iotos/CollectNetworkInfoClient.java
 ./src/test/iotos/ClientMeasurer.java
 ./src/test/iotos/GeneticAlgo.java
+./src/test/iotos/copySourceMap.java
 ./src/test/iotos/SDNController.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceManager.java
 ./src/it/unibo/deis/lia/ramp/service/management/ServiceDiscoveryAgent.java
