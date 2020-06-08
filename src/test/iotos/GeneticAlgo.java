@@ -93,15 +93,16 @@ public class GeneticAlgo implements TopologyGraphSelector{
 
         Map<Integer,Double> flowFits = calculateFitness(flowAR,flowDelays,flowThroughputs);
 
-        System.out.println("10.0.0.1 - 10.0.0.2:");
-        System.out.println("throughput = " + checkGraph.getNode("1").getEdgeBetween("2").getAttribute("throughput"));
-        System.out.println("10.0.0.2 - 10.0.0.3:");
-        System.out.println("throughput = " + checkGraph.getNode("2").getEdgeBetween("3").getAttribute("throughput"));
+        // System.out.println("10.0.0.1 - 10.0.0.2:");
+        // System.out.println("throughput = " + checkGraph.getNode("1").getEdgeBetween("2").getAttribute("throughput"));
+        // System.out.println("10.0.0.2 - 10.0.0.3:");
+        // System.out.println("throughput = " + checkGraph.getNode("2").getEdgeBetween("3").getAttribute("throughput"));
         
 
         boolean allFit = true;
         for(Integer flowID : flowFits.keySet()){
             System.out.println("===========GeneticAlgo============");
+            System.out.println("Request by: "+ sourceNodeId);
             System.out.println("fitness value of " + flowID + " is :" + flowFits.get(flowID));
             System.out.println("require: delay = " + flowAR.get(flowID).getRequireDelay() + ", throughput = " + flowAR.get(flowID).getRequireThroughput());
             System.out.println("predict: delay = " + flowDelays.get(flowID) + ", throughput = " + flowThroughputs.get(flowID));
