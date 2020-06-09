@@ -16,7 +16,7 @@ public class SDNController{
 
 	static RampEntryPoint ramp;
 	
-	static int countClient = 3;
+	static int countClient = 29;
 
 
     public static void main(String[] args){

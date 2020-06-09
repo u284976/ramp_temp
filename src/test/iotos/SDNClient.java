@@ -110,21 +110,66 @@ public class SDNClient{
         ServiceResponse appService = null;
         try {
             switch (nodeID) {
-                // controller node
-                case "1":
-                    break;
-                case "2":
+                case "25":
                     appService = ServiceDiscovery.findServices(
                         5,
-                        "application3",
+                        "application1",
                         3000,
                         1
                     ).elementAt(0);
                     break;
-                case "3":
+                case "26":
                     appService = ServiceDiscovery.findServices(
                         5, 
                         "application1",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "19":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application11",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "21":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application13",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "10":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application1",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "24":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application14",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "23":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application10",
+                        3000,
+                        1
+                    ).elementAt(0);
+                    break;
+                case "16":
+                    appService = ServiceDiscovery.findServices(
+                        5, 
+                        "application26",
                         3000,
                         1
                     ).elementAt(0);
@@ -144,24 +189,108 @@ public class SDNClient{
         System.out.println("========================================");
 
         ApplicationRequirements applicationRequirements = null;
-        if(nodeID.equals("2")){
-            applicationRequirements = new ApplicationRequirements(
-                TrafficType.VIDEO_STREAM,   // trafficType
-                1,                          // payloadSize
-                5,                          // GenPacketPerSeconds
-                1000.0,                     // requireDelay
-                2000.0,                     // requireThroughput
-                300                         // duration
-            );
-        }else if(nodeID.equals("3")){
-            applicationRequirements = new ApplicationRequirements(
-                TrafficType.FILE_TRANSFER,  // trafficType
-                100,                        // payloadSize
-                1,                          // GenPacketPerSeconds
-                3000.0,                     // requireDelay
-                2000.0,                     // requireThroughput
-                300                         // duration
-            );
+        // if(nodeID.equals("2")){
+        //     applicationRequirements = new ApplicationRequirements(
+        //         TrafficType.VIDEO_STREAM,   // trafficType
+        //         1,                          // payloadSize
+        //         5,                          // GenPacketPerSeconds
+        //         1000.0,                     // requireDelay
+        //         2000.0,                     // requireThroughput
+        //         300                         // duration
+        //     );
+        // }else if(nodeID.equals("3")){
+        //     applicationRequirements = new ApplicationRequirements(
+        //         TrafficType.FILE_TRANSFER,  // trafficType
+        //         100,                        // payloadSize
+        //         1,                          // GenPacketPerSeconds
+        //         3000.0,                     // requireDelay
+        //         2000.0,                     // requireThroughput
+        //         300                         // duration
+        //     );
+        // }
+        switch (nodeID) {
+            case "25":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.FILE_TRANSFER,
+                    16,
+                    500,
+                    2000.0,
+                    8000.0,
+                    300
+                );
+                break;
+            case "26":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.FILE_TRANSFER,
+                    20,
+                    400,
+                    2000.0,
+                    8000.0,
+                    300
+                );
+                break;
+            case "19":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.FILE_TRANSFER,
+                    16,
+                    500,
+                    2000.0,
+                    8000.0,
+                    300
+                );
+                break;
+            case "21":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.FILE_TRANSFER,
+                    16,
+                    300,
+                    2000.0,
+                    8000.0,
+                    300
+                );
+                break;
+            case "10":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.VIDEO_STREAM,
+                    16,
+                    300,
+                    2000.0,
+                    4800.0,
+                    300
+                );
+                break;
+            case "24":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.VIDEO_STREAM,
+                    20,
+                    200,
+                    2000.0,
+                    4000.0,
+                    300
+                );
+                break;
+            case "23":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.VIDEO_STREAM,
+                    20,
+                    200,
+                    2000.0,
+                    4000.0,
+                    300
+                );
+                break;
+            case "16":
+                applicationRequirements = new ApplicationRequirements(
+                    TrafficType.VIDEO_STREAM,
+                    8,
+                    300,
+                    2000.0,
+                    1600.0,
+                    300
+                );
+                break;
+            default:
+                break;
         }
 
         int[] destNodeID = {appService.getServerNodeId()};

@@ -1755,19 +1755,13 @@ public class ControllerService extends Thread {
             Map<String,List<Double>> measureResult = updateMessage.getMeasureResult();
             MultiNode sourceGraphNode = topologyGraph.getNode(Integer.toString(clientNodeId));
 
-            // System.out.println("=================================================");
-            // System.out.println("setup delay and throughput from : " + clientNodeId);
+            System.out.println("=================================================");
+            System.out.println("setup delay and throughput from : " + clientNodeId);
             if(sourceGraphNode != null){
                 for(String neighborAddress : measureResult.keySet()){
                     for(Edge neighborEdge : sourceGraphNode.getEachEdge()){
                         String label = neighborEdge.getAttribute("ui.label");
                         if(label.contains(neighborAddress)){
-                            // if(neighborEdge.getAttribute("delay") != null){
-                            //     neighborEdge.removeAttribute("delay");
-                            // }
-                            // if(neighborEdge.getAttribute("throughput") != null){
-                            //     neighborEdge.removeAttribute("throughput");
-                            // }
                             double delay = measureResult.get(neighborAddress).get(0);
                             neighborEdge.addAttribute("delay", delay);
                             double throughput = measureResult.get(neighborAddress).get(1);
@@ -1775,6 +1769,7 @@ public class ControllerService extends Thread {
                              * 100000 -> wired
                              * 10000 -> wireless ( 40 meters)
                              */
+                            System.out.println(neighborEdge.getId() + ", delay = " + delay + ", throughput = " + throughput);
                             if(throughput > 100000){
                                 throughput = 100000;
                             }else if(throughput > 10000){
