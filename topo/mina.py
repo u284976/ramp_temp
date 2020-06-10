@@ -13,6 +13,11 @@ from mininet.log import output, error
 from mininet.term import makeTerms
 
 
+import threading
+import inspect
+import ctypes
+
+
 def myNetwork():
 
     net = Mininet_wifi(topo=None,
@@ -224,9 +229,12 @@ def myNetwork():
     info( '*** Post configure nodes\n')
 
     CLI.do_openMultiXterm = openMultiXterm
+    CLI.do_execute = execute
+    CLI.do_stopThread = stopThread
+    CLI.do_stopTest = stopTest
     CLI(net)
+    
     net.stop()
-
 
 # add by u284976
 def openMultiXterm(self, line):
@@ -242,6 +250,55 @@ def openMultiXterm(self, line):
             else:
                 node = self.mn[ arg ]
                 self.mn.terms += makeTerms( [ node ], term = term )
+
+Threads = []
+
+def execute(self, line):
+    args = line.split()
+    # please enter 2 at args[0]
+    for i in range(int(args[0]),int(args[1])+1):
+        node = self.mn['sta'+str(i)]
+        node.cmd("cd ramp/" + str(i) + "-node/")
+        import threading
+
+        Threads.append(MyThread(node))
+        Threads[i-2].start()
+        # thread = MyThread(node)
+        # thread.start()
+
+# to not display stdout in the mininet window
+def stopThread(self, line):
+    for t in Threads:
+        stop_thread(t)
+
+def stop_thread(thread):
+    _async_raise(thread.ident, SystemExit)
+
+def _async_raise(tid, exctype):
+    """raises the exception, performs cleanup if needed"""
+    tid = ctypes.c_long(tid)
+    if not inspect.isclass(exctype):
+        exctype = type(exctype)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
+    if res == 0:
+        raise ValueError("invalid thread id")
+    elif res != 1:
+        # """if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect"""
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
+        raise SystemError("PyThreadState_SetAsyncExc failed")
+
+class MyThread(threading.Thread):
+    def __init__(self, node):
+        threading.Thread.__init__(self)
+        self.node = node
+    def run(self):
+        self.node.cmd("sh start.sh")
+
+# send ctrl+c to all node's cmd
+def stopTest(self, line):
+    for node in self.mn.values():
+        node.sendInt()
 
 if __name__ == '__main__':
     setLogLevel( 'info' )
