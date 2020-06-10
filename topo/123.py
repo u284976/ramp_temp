@@ -22,19 +22,14 @@ def myNetwork():
 
     info( '*** Add switches/APs\n')
     s1 = net.addSwitch('s1', cls=OVSKernelSwitch)
-    s3 = net.addSwitch('s3', cls=OVSKernelSwitch)
-    s2 = net.addSwitch('s2', cls=OVSKernelSwitch)
 
     info( '*** Add hosts/stations\n')
     h2 = net.addHost('h2', cls=Host, ip='10.0.0.2', defaultRoute=None)
-    h3 = net.addHost('h3', cls=Host, ip='10.0.0.3', defaultRoute=None)
     h1 = net.addHost('h1', cls=Host, ip='10.0.0.1', defaultRoute=None)
 
     info( '*** Add links\n')
-    net.addLink(h1, s1)
     net.addLink(s1, h2)
-    net.addLink(h2, s2)
-    net.addLink(s2, h3)
+    net.addLink(s1, h1)
 
     info( '*** Starting network\n')
     net.build()
@@ -44,8 +39,6 @@ def myNetwork():
 
     info( '*** Starting switches/APs\n')
     net.get('s1').start([c0])
-    net.get('s3').start([])
-    net.get('s2').start([c0])
 
     info( '*** Post configure nodes\n')
 
